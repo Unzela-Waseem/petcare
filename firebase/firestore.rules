@@ -10,6 +10,10 @@ service cloud.firestore {
       return /databases/$(database)/documents/users/$(uid);
     }
 
+    function publicProfilePath(uid) {
+      return /databases/$(database)/documents/publicProfiles/$(uid);
+    }
+
     function userExists(uid) {
       return signedIn() && exists(userPath(uid));
     }
@@ -28,26 +32,50 @@ service cloud.firestore {
       return isActive() && userData(request.auth.uid).role == role;
     }
 
+    function changedOnly(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+
+    function petPath(petId) {
+      return /databases/$(database)/documents/pets/$(petId);
+    }
+
     function isPetOwner(petId) {
       return isActive()
-        && exists(/databases/$(database)/documents/pets/$(petId))
-        && get(/databases/$(database)/documents/pets/$(petId)).data.ownerId == request.auth.uid;
+        && exists(petPath(petId))
+        && get(petPath(petId)).data.ownerId == request.auth.uid;
+    }
+
+    function vetAccessPath(petId, vetId) {
+      return /databases/$(database)/documents/petAccess/$(petId)/veterinarians/$(vetId);
     }
 
     function hasVetAccess(petId) {
       return hasRole('veterinarian')
-        && exists(/databases/$(database)/documents/petAccess/$(petId)/veterinarians/$(request.auth.uid))
-        && get(/databases/$(database)/documents/petAccess/$(petId)/veterinarians/$(request.auth.uid)).data.active == true;
+        && exists(vetAccessPath(petId, request.auth.uid))
+        && get(vetAccessPath(petId, request.auth.uid)).data.active == true;
+    }
+
+    function shelterPath(shelterId) {
+      return /databases/$(database)/documents/shelters/$(shelterId);
     }
 
     function ownsShelter(shelterId) {
       return hasRole('shelterAdmin')
-        && exists(/databases/$(database)/documents/shelters/$(shelterId))
-        && get(/databases/$(database)/documents/shelters/$(shelterId)).data.adminId == request.auth.uid;
+        && exists(shelterPath(shelterId))
+        && get(shelterPath(shelterId)).data.adminId == request.auth.uid;
     }
 
-    function immutable(fields) {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    function appointmentPath(appointmentId) {
+      return /databases/$(database)/documents/appointments/$(appointmentId);
+    }
+
+    function slotPath(slotId) {
+      return /databases/$(database)/documents/vetAvailability/$(slotId);
+    }
+
+    function validRole(role) {
+      return role in ['petOwner', 'veterinarian', 'shelterAdmin'];
     }
 
     match /users/{uid} {
@@ -55,20 +83,24 @@ service cloud.firestore {
         && request.auth.uid == uid
         && request.resource.data.uid == uid
         && request.resource.data.email == request.auth.token.email
-        && request.resource.data.role in ['petOwner', 'veterinarian', 'shelterAdmin']
+        && validRole(request.resource.data.role)
         && request.resource.data.accountStatus == 'pendingEmailVerification'
         && request.resource.data.keys().hasOnly([
           'uid', 'name', 'email', 'phone', 'role', 'accountStatus',
-          'photoUrl', 'createdAt', 'updatedAt'
+          'photoPath', 'photoUrl', 'notificationPreferences',
+          'createdAt', 'updatedAt'
         ]);
       allow read: if signedIn() && request.auth.uid == uid;
       allow update: if signedIn() && request.auth.uid == uid && (
-        immutable(['name', 'phone', 'photoUrl', 'updatedAt'])
+        changedOnly([
+          'name', 'phone', 'photoPath', 'photoUrl',
+          'notificationPreferences', 'updatedAt'
+        ])
         || (
           resource.data.accountStatus == 'pendingEmailVerification'
           && request.resource.data.accountStatus == 'active'
           && request.auth.token.email_verified == true
-          && immutable(['accountStatus', 'updatedAt'])
+          && changedOnly(['accountStatus', 'updatedAt'])
         )
       );
       allow delete: if false;
@@ -80,108 +112,337 @@ service cloud.firestore {
         && request.auth.uid == uid
         && request.resource.data.userId == uid
         && request.resource.data.token is string
-        && request.resource.data.platform in ['android', 'iOS', 'web', 'macOS', 'windows', 'linux'];
+        && request.resource.data.platform in [
+          'android', 'iOS', 'web', 'macOS', 'windows', 'linux'
+        ]
+        && request.resource.data.keys().hasOnly([
+          'userId', 'token', 'platform', 'updatedAt'
+        ]);
     }
 
     match /publicProfiles/{uid} {
-      allow read: if isActive();
-      allow write: if false;
+      allow read: if isActive() && validRole(resource.data.role);
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && validRole(request.resource.data.role)
+        && getAfter(userPath(uid)).data.role == request.resource.data.role
+        && request.resource.data.keys().hasOnly([
+          'uid', 'name', 'role', 'photoUrl', 'clinicName',
+          'specialty', 'location', 'createdAt', 'updatedAt'
+        ]);
+      allow update: if isActive()
+        && request.auth.uid == uid
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.role == resource.data.role
+        && changedOnly([
+          'name', 'photoUrl', 'clinicName', 'specialty',
+          'location', 'updatedAt'
+        ]);
+      allow delete: if false;
     }
 
     match /pets/{petId} {
       allow create: if hasRole('petOwner')
         && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.age is int
         && request.resource.data.keys().hasOnly([
           'ownerId', 'name', 'species', 'breed', 'age', 'gender',
-          'photoPath', 'createdAt', 'updatedAt'
+          'description', 'photoPath', 'photoUrl', 'createdAt', 'updatedAt'
         ]);
       allow read: if isActive() && (
         resource.data.ownerId == request.auth.uid || hasVetAccess(petId)
       );
       allow update: if hasRole('petOwner')
         && resource.data.ownerId == request.auth.uid
-        && request.resource.data.ownerId == resource.data.ownerId;
-      allow delete: if hasRole('petOwner') && resource.data.ownerId == request.auth.uid;
+        && request.resource.data.ownerId == resource.data.ownerId
+        && changedOnly([
+          'name', 'species', 'breed', 'age', 'gender',
+          'description', 'photoPath', 'photoUrl', 'updatedAt'
+        ]);
+      allow delete: if hasRole('petOwner')
+        && resource.data.ownerId == request.auth.uid;
     }
 
     match /petAccess/{petId}/veterinarians/{vetId} {
-      allow read, write: if false;
+      allow read: if isActive() && (
+        vetId == request.auth.uid || isPetOwner(petId)
+      );
+      allow create: if hasRole('petOwner')
+        && isPetOwner(petId)
+        && request.resource.data.petId == petId
+        && request.resource.data.veterinarianId == vetId
+        && request.resource.data.active == true
+        && existsAfter(appointmentPath(request.resource.data.appointmentId))
+        && getAfter(appointmentPath(request.resource.data.appointmentId)).data.ownerId
+          == request.auth.uid
+        && getAfter(appointmentPath(request.resource.data.appointmentId)).data.petId
+          == petId
+        && getAfter(appointmentPath(request.resource.data.appointmentId)).data.veterinarianId
+          == vetId
+        && request.resource.data.keys().hasOnly([
+          'petId', 'veterinarianId', 'appointmentId', 'active',
+          'createdAt', 'updatedAt'
+        ]);
+      allow update: if hasRole('petOwner')
+        && isPetOwner(petId)
+        && request.resource.data.petId == resource.data.petId
+        && request.resource.data.veterinarianId == resource.data.veterinarianId
+        && request.resource.data.active == true
+        && existsAfter(appointmentPath(request.resource.data.appointmentId))
+        && getAfter(appointmentPath(request.resource.data.appointmentId)).data.ownerId
+          == request.auth.uid
+        && getAfter(appointmentPath(request.resource.data.appointmentId)).data.petId
+          == petId
+        && getAfter(appointmentPath(request.resource.data.appointmentId)).data.veterinarianId
+          == vetId
+        && changedOnly(['appointmentId', 'active', 'updatedAt']);
+      allow delete: if false;
     }
 
     match /petHealthRecords/{recordId} {
-      allow create: if hasRole('veterinarian')
-        && request.resource.data.veterinarianId == request.auth.uid
-        && hasVetAccess(request.resource.data.petId)
-        && request.resource.data.keys().hasOnly([
-          'petId', 'veterinarianId', 'diagnosis', 'treatment',
-          'prescription', 'date', 'followUpDate', 'reportPaths',
-          'createdAt', 'updatedAt'
-        ]);
-      allow read: if isPetOwner(resource.data.petId) || hasVetAccess(resource.data.petId);
-      allow update: if hasRole('veterinarian')
-        && resource.data.veterinarianId == request.auth.uid
-        && hasVetAccess(resource.data.petId)
-        && request.resource.data.petId == resource.data.petId
-        && request.resource.data.veterinarianId == resource.data.veterinarianId;
-      allow delete: if hasRole('veterinarian')
-        && resource.data.veterinarianId == request.auth.uid
-        && hasVetAccess(resource.data.petId);
-    }
-
-    match /appointments/{appointmentId} {
-      allow create: if hasRole('petOwner')
-        && request.resource.data.ownerId == request.auth.uid
-        && isPetOwner(request.resource.data.petId)
-        && userData(request.resource.data.veterinarianId).role == 'veterinarian'
-        && request.resource.data.status == 'pending'
-        && request.resource.data.keys().hasOnly([
-          'petId', 'ownerId', 'veterinarianId', 'dateTime', 'reason',
-          'status', 'createdAt', 'updatedAt'
-        ]);
-      allow read: if isActive() && (
-        resource.data.ownerId == request.auth.uid
-        || resource.data.veterinarianId == request.auth.uid
-      );
-      allow update: if isActive()
-        && request.resource.data.ownerId == resource.data.ownerId
-        && request.resource.data.petId == resource.data.petId
-        && request.resource.data.veterinarianId == resource.data.veterinarianId
-        && (
+      allow create: if request.resource.data.keys().hasOnly([
+          'petId', 'createdBy', 'veterinarianId', 'type', 'title',
+          'diagnosis', 'treatment', 'prescription', 'notes', 'date',
+          'dueDate', 'followUpDate', 'reportPaths', 'createdAt', 'updatedAt'
+        ]) && (
           (
-            resource.data.ownerId == request.auth.uid
-            && request.resource.data.status in ['pending', 'cancelled']
-            && immutable(['dateTime', 'reason', 'status', 'updatedAt'])
+            hasRole('petOwner')
+            && isPetOwner(request.resource.data.petId)
+            && request.resource.data.createdBy == request.auth.uid
+            && request.resource.data.veterinarianId == null
+            && request.resource.data.type in ['vaccination', 'deworming', 'allergy']
+            && request.resource.data.diagnosis == ''
+            && request.resource.data.treatment == ''
+            && request.resource.data.prescription == ''
+            && request.resource.data.reportPaths.size() == 0
           )
           || (
             hasRole('veterinarian')
-            && resource.data.veterinarianId == request.auth.uid
-            && request.resource.data.status in ['confirmed', 'completed', 'cancelled']
-            && immutable(['dateTime', 'status', 'updatedAt'])
+            && hasVetAccess(request.resource.data.petId)
+            && request.resource.data.createdBy == request.auth.uid
+            && request.resource.data.veterinarianId == request.auth.uid
+            && request.resource.data.type in [
+              'vaccination', 'deworming', 'allergy', 'medical'
+            ]
           )
         );
-      allow delete: if false;
+      allow read: if isPetOwner(resource.data.petId)
+        || hasVetAccess(resource.data.petId);
+      allow update: if request.resource.data.petId == resource.data.petId
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.veterinarianId == resource.data.veterinarianId
+        && request.resource.data.type == resource.data.type
+        && (
+          (
+            hasRole('petOwner')
+            && resource.data.createdBy == request.auth.uid
+            && resource.data.type in ['vaccination', 'deworming', 'allergy']
+            && request.resource.data.diagnosis == ''
+            && request.resource.data.treatment == ''
+            && request.resource.data.prescription == ''
+            && request.resource.data.reportPaths.size() == 0
+          )
+          || (
+            hasRole('veterinarian')
+            && resource.data.createdBy == request.auth.uid
+            && hasVetAccess(resource.data.petId)
+          )
+        );
+      allow delete: if (
+          hasRole('petOwner')
+          && resource.data.createdBy == request.auth.uid
+          && resource.data.type in ['vaccination', 'deworming', 'allergy']
+        ) || (
+          hasRole('veterinarian')
+          && resource.data.createdBy == request.auth.uid
+          && hasVetAccess(resource.data.petId)
+        );
     }
 
     match /vetAvailability/{slotId} {
       allow read: if isActive();
       allow create: if hasRole('veterinarian')
         && request.resource.data.veterinarianId == request.auth.uid
-        && request.resource.data.isBooked == false;
-      allow update: if hasRole('veterinarian')
-        && resource.data.veterinarianId == request.auth.uid
-        && request.resource.data.veterinarianId == resource.data.veterinarianId
-        && request.resource.data.isBooked == resource.data.isBooked;
+        && request.resource.data.isBooked == false
+        && request.resource.data.bookingOwnerId == null
+        && request.resource.data.appointmentId == null
+        && request.resource.data.start < request.resource.data.end
+        && request.resource.data.keys().hasOnly([
+          'veterinarianId', 'start', 'end', 'isBooked', 'bookingOwnerId',
+          'appointmentId', 'createdAt', 'updatedAt'
+        ]);
+      allow update: if (
+          resource.data.isBooked == false
+          && request.resource.data.isBooked == true
+          && request.resource.data.veterinarianId == resource.data.veterinarianId
+          && request.resource.data.start == resource.data.start
+          && request.resource.data.end == resource.data.end
+          && request.resource.data.appointmentId == slotId
+          && existsAfter(appointmentPath(slotId))
+          && getAfter(appointmentPath(slotId)).data.ownerId
+            == request.resource.data.bookingOwnerId
+          && getAfter(appointmentPath(slotId)).data.veterinarianId
+            == resource.data.veterinarianId
+          && changedOnly([
+            'isBooked', 'bookingOwnerId', 'appointmentId', 'updatedAt'
+          ])
+          && (
+            (
+              hasRole('petOwner')
+              && request.resource.data.bookingOwnerId == request.auth.uid
+            )
+            || (
+              hasRole('veterinarian')
+              && resource.data.veterinarianId == request.auth.uid
+              && getAfter(appointmentPath(slotId)).data.rescheduledFrom is string
+              && exists(appointmentPath(
+                getAfter(appointmentPath(slotId)).data.rescheduledFrom
+              ))
+              && get(appointmentPath(
+                getAfter(appointmentPath(slotId)).data.rescheduledFrom
+              )).data.veterinarianId == request.auth.uid
+              && get(appointmentPath(
+                getAfter(appointmentPath(slotId)).data.rescheduledFrom
+              )).data.ownerId == request.resource.data.bookingOwnerId
+              && getAfter(appointmentPath(
+                getAfter(appointmentPath(slotId)).data.rescheduledFrom
+              )).data.status == 'cancelled'
+            )
+          )
+        ) || (
+          resource.data.isBooked == true
+          && request.resource.data.isBooked == false
+          && request.resource.data.veterinarianId == resource.data.veterinarianId
+          && request.resource.data.start == resource.data.start
+          && request.resource.data.end == resource.data.end
+          && request.resource.data.bookingOwnerId == null
+          && request.resource.data.appointmentId == null
+          && resource.data.appointmentId is string
+          && existsAfter(appointmentPath(resource.data.appointmentId))
+          && getAfter(appointmentPath(resource.data.appointmentId)).data.status
+            == 'cancelled'
+          && getAfter(appointmentPath(resource.data.appointmentId)).data.ownerId
+            == resource.data.bookingOwnerId
+          && getAfter(appointmentPath(resource.data.appointmentId)).data.veterinarianId
+            == resource.data.veterinarianId
+          && (
+            (
+              hasRole('petOwner')
+              && resource.data.bookingOwnerId == request.auth.uid
+            )
+            || (
+              hasRole('veterinarian')
+              && resource.data.veterinarianId == request.auth.uid
+            )
+          )
+          && changedOnly([
+            'isBooked', 'bookingOwnerId', 'appointmentId', 'updatedAt'
+          ])
+        ) || (
+          hasRole('veterinarian')
+          && resource.data.veterinarianId == request.auth.uid
+          && resource.data.isBooked == false
+          && request.resource.data.isBooked == false
+          && request.resource.data.veterinarianId == resource.data.veterinarianId
+          && changedOnly(['start', 'end', 'updatedAt'])
+        );
       allow delete: if hasRole('veterinarian')
         && resource.data.veterinarianId == request.auth.uid
         && resource.data.isBooked == false;
     }
 
+    match /appointments/{appointmentId} {
+      allow create: if appointmentId == request.resource.data.slotId
+        && request.resource.data.status == 'pending'
+        && (
+          (
+            hasRole('petOwner')
+            && request.resource.data.ownerId == request.auth.uid
+            && isPetOwner(request.resource.data.petId)
+          )
+          || (
+            hasRole('veterinarian')
+            && request.resource.data.veterinarianId == request.auth.uid
+            && request.resource.data.rescheduledFrom is string
+            && exists(appointmentPath(request.resource.data.rescheduledFrom))
+            && get(appointmentPath(request.resource.data.rescheduledFrom)).data.veterinarianId
+              == request.auth.uid
+            && get(appointmentPath(request.resource.data.rescheduledFrom)).data.ownerId
+              == request.resource.data.ownerId
+            && get(appointmentPath(request.resource.data.rescheduledFrom)).data.petId
+              == request.resource.data.petId
+            && get(appointmentPath(request.resource.data.rescheduledFrom)).data.petName
+              == request.resource.data.petName
+            && get(appointmentPath(request.resource.data.rescheduledFrom)).data.ownerName
+              == request.resource.data.ownerName
+            && get(appointmentPath(request.resource.data.rescheduledFrom)).data.veterinarianName
+              == request.resource.data.veterinarianName
+            && get(appointmentPath(request.resource.data.rescheduledFrom)).data.reason
+              == request.resource.data.reason
+            && get(appointmentPath(request.resource.data.rescheduledFrom)).data.status
+              in ['pending', 'confirmed']
+            && getAfter(appointmentPath(request.resource.data.rescheduledFrom)).data.status
+              == 'cancelled'
+          )
+        )
+        && exists(publicProfilePath(request.resource.data.veterinarianId))
+        && get(publicProfilePath(request.resource.data.veterinarianId)).data.role
+          == 'veterinarian'
+        && existsAfter(slotPath(request.resource.data.slotId))
+        && getAfter(slotPath(request.resource.data.slotId)).data.veterinarianId
+          == request.resource.data.veterinarianId
+        && getAfter(slotPath(request.resource.data.slotId)).data.bookingOwnerId
+          == request.resource.data.ownerId
+        && getAfter(slotPath(request.resource.data.slotId)).data.appointmentId
+          == appointmentId
+        && getAfter(slotPath(request.resource.data.slotId)).data.start
+          == request.resource.data.dateTime
+        && request.resource.data.keys().hasOnly([
+          'slotId', 'rescheduledFrom', 'petId', 'petName', 'ownerId',
+          'ownerName', 'veterinarianId', 'veterinarianName', 'dateTime',
+          'reason', 'status', 'createdAt', 'updatedAt'
+        ]);
+      allow read: if isActive() && (
+        resource.data.ownerId == request.auth.uid
+        || resource.data.veterinarianId == request.auth.uid
+      );
+      allow update: if request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.petId == resource.data.petId
+        && request.resource.data.veterinarianId == resource.data.veterinarianId
+        && request.resource.data.slotId == resource.data.slotId
+        && (
+          (
+            hasRole('petOwner')
+            && resource.data.ownerId == request.auth.uid
+            && request.resource.data.status == 'cancelled'
+            && resource.data.status in ['pending', 'confirmed']
+            && changedOnly(['status', 'updatedAt'])
+          )
+          || (
+            hasRole('veterinarian')
+            && resource.data.veterinarianId == request.auth.uid
+            && request.resource.data.status in ['confirmed', 'completed', 'cancelled']
+            && changedOnly(['status', 'updatedAt'])
+          )
+        );
+      allow delete: if false;
+    }
+
     match /shelters/{shelterId} {
       allow create: if hasRole('shelterAdmin')
-        && request.resource.data.adminId == request.auth.uid;
+        && request.resource.data.adminId == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'adminId', 'name', 'location', 'phone', 'description',
+          'createdAt', 'updatedAt'
+        ]);
       allow read: if isActive();
       allow update: if ownsShelter(shelterId)
-        && request.resource.data.adminId == resource.data.adminId;
+        && request.resource.data.adminId == resource.data.adminId
+        && changedOnly([
+          'name', 'location', 'phone', 'description', 'updatedAt'
+        ]);
       allow delete: if ownsShelter(shelterId);
     }
 
@@ -193,7 +454,12 @@ service cloud.firestore {
       allow create: if hasRole('shelterAdmin')
         && request.resource.data.adminId == request.auth.uid
         && ownsShelter(request.resource.data.shelterId)
-        && request.resource.data.status == 'available';
+        && request.resource.data.status in ['available', 'pending', 'adopted']
+        && request.resource.data.keys().hasOnly([
+          'shelterId', 'adminId', 'petName', 'species', 'age', 'gender',
+          'healthStatus', 'description', 'photoPath', 'photoUrl', 'status',
+          'createdAt', 'updatedAt'
+        ]);
       allow update: if ownsShelter(resource.data.shelterId)
         && request.resource.data.shelterId == resource.data.shelterId
         && request.resource.data.adminId == resource.data.adminId
@@ -206,25 +472,45 @@ service cloud.firestore {
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.status == 'pending'
         && exists(/databases/$(database)/documents/adoptionListings/$(request.resource.data.listingId))
+        && get(/databases/$(database)/documents/adoptionListings/$(request.resource.data.listingId)).data.status
+          == 'available'
         && get(/databases/$(database)/documents/adoptionListings/$(request.resource.data.listingId)).data.shelterId
-          == request.resource.data.shelterId;
+          == request.resource.data.shelterId
+        && get(/databases/$(database)/documents/adoptionListings/$(request.resource.data.listingId)).data.adminId
+          == request.resource.data.shelterAdminId
+        && request.resource.data.keys().hasOnly([
+          'listingId', 'petName', 'ownerId', 'ownerName', 'shelterId',
+          'shelterAdminId', 'message', 'status', 'createdAt', 'updatedAt'
+        ]);
       allow read: if isActive() && (
-        resource.data.ownerId == request.auth.uid || ownsShelter(resource.data.shelterId)
+        resource.data.ownerId == request.auth.uid
+        || (
+          resource.data.shelterAdminId == request.auth.uid
+          && ownsShelter(resource.data.shelterId)
+        )
       );
-      allow update: if ownsShelter(resource.data.shelterId)
+      allow update: if resource.data.shelterAdminId == request.auth.uid
+        && ownsShelter(resource.data.shelterId)
         && request.resource.data.ownerId == resource.data.ownerId
         && request.resource.data.shelterId == resource.data.shelterId
+        && request.resource.data.shelterAdminId == resource.data.shelterAdminId
         && request.resource.data.listingId == resource.data.listingId
         && request.resource.data.status in ['approved', 'rejected', 'pending']
-        && immutable(['status', 'updatedAt']);
+        && changedOnly(['status', 'updatedAt']);
       allow delete: if false;
     }
 
     match /successStories/{storyId} {
-      allow read: if isActive() && (resource.data.published == true || ownsShelter(resource.data.shelterId));
+      allow read: if isActive() && (
+        resource.data.published == true || ownsShelter(resource.data.shelterId)
+      );
       allow create: if hasRole('shelterAdmin')
         && request.resource.data.adminId == request.auth.uid
-        && ownsShelter(request.resource.data.shelterId);
+        && ownsShelter(request.resource.data.shelterId)
+        && request.resource.data.keys().hasOnly([
+          'shelterId', 'adminId', 'title', 'story', 'published',
+          'photoPath', 'photoUrl', 'createdAt', 'updatedAt'
+        ]);
       allow update: if ownsShelter(resource.data.shelterId)
         && request.resource.data.shelterId == resource.data.shelterId
         && request.resource.data.adminId == resource.data.adminId;
@@ -234,28 +520,54 @@ service cloud.firestore {
     match /volunteerRequests/{requestId} {
       allow create: if isActive()
         && request.resource.data.userId == request.auth.uid
-        && request.resource.data.status == 'pending';
+        && request.resource.data.kind in ['volunteer', 'donation']
+        && request.resource.data.status == 'pending'
+        && exists(shelterPath(request.resource.data.shelterId))
+        && get(shelterPath(request.resource.data.shelterId)).data.adminId
+          == request.resource.data.shelterAdminId
+        && request.resource.data.keys().hasOnly([
+          'shelterId', 'shelterAdminId', 'userId', 'userName', 'kind',
+          'message', 'status', 'createdAt', 'updatedAt'
+        ]);
       allow read: if isActive() && (
-        resource.data.userId == request.auth.uid || ownsShelter(resource.data.shelterId)
+        resource.data.userId == request.auth.uid
+        || (
+          resource.data.shelterAdminId == request.auth.uid
+          && ownsShelter(resource.data.shelterId)
+        )
       );
-      allow update: if ownsShelter(resource.data.shelterId)
+      allow update: if resource.data.shelterAdminId == request.auth.uid
+        && ownsShelter(resource.data.shelterId)
         && request.resource.data.userId == resource.data.userId
         && request.resource.data.shelterId == resource.data.shelterId
-        && immutable(['status', 'updatedAt']);
+        && changedOnly(['status', 'updatedAt']);
       allow delete: if false;
     }
 
     match /contactMessages/{messageId} {
       allow create: if isActive()
         && request.resource.data.userId == request.auth.uid
-        && request.resource.data.status == 'open';
+        && request.resource.data.kind == 'inquiry'
+        && request.resource.data.status == 'pending'
+        && exists(shelterPath(request.resource.data.shelterId))
+        && get(shelterPath(request.resource.data.shelterId)).data.adminId
+          == request.resource.data.shelterAdminId
+        && request.resource.data.keys().hasOnly([
+          'shelterId', 'shelterAdminId', 'userId', 'userName', 'kind',
+          'message', 'status', 'createdAt', 'updatedAt'
+        ]);
       allow read: if isActive() && (
-        resource.data.userId == request.auth.uid || ownsShelter(resource.data.shelterId)
+        resource.data.userId == request.auth.uid
+        || (
+          resource.data.shelterAdminId == request.auth.uid
+          && ownsShelter(resource.data.shelterId)
+        )
       );
-      allow update: if ownsShelter(resource.data.shelterId)
+      allow update: if resource.data.shelterAdminId == request.auth.uid
+        && ownsShelter(resource.data.shelterId)
         && request.resource.data.userId == resource.data.userId
         && request.resource.data.shelterId == resource.data.shelterId
-        && immutable(['status', 'updatedAt']);
+        && changedOnly(['status', 'updatedAt']);
       allow delete: if false;
     }
 
@@ -265,7 +577,11 @@ service cloud.firestore {
     }
 
     match /wishlists/{uid}/items/{productId} {
-      allow read, create, delete: if isActive() && request.auth.uid == uid;
+      allow read, delete: if isActive() && request.auth.uid == uid;
+      allow create: if isActive()
+        && request.auth.uid == uid
+        && request.resource.data.productId == productId
+        && request.resource.data.keys().hasOnly(['productId', 'createdAt']);
       allow update: if false;
     }
 
@@ -275,21 +591,29 @@ service cloud.firestore {
     }
 
     match /bookmarks/{uid}/items/{blogId} {
-      allow read, create, update, delete: if isActive() && request.auth.uid == uid;
+      allow read, delete: if isActive() && request.auth.uid == uid;
+      allow create: if isActive()
+        && request.auth.uid == uid
+        && request.resource.data.blogId == blogId
+        && request.resource.data.keys().hasOnly(['blogId', 'createdAt']);
+      allow update: if false;
     }
 
     match /notifications/{uid}/items/{notificationId} {
       allow read: if isActive() && request.auth.uid == uid;
       allow update: if isActive()
         && request.auth.uid == uid
-        && immutable(['readAt']);
+        && changedOnly(['readAt']);
       allow create, delete: if false;
     }
 
     match /feedback/{feedbackId} {
       allow create: if isActive()
         && request.resource.data.userId == request.auth.uid
-        && request.resource.data.type in ['suggestion', 'bug', 'feedback'];
+        && request.resource.data.type in ['suggestion', 'bug', 'feedback']
+        && request.resource.data.keys().hasOnly([
+          'userId', 'type', 'message', 'createdAt'
+        ]);
       allow read: if isActive() && resource.data.userId == request.auth.uid;
       allow update, delete: if false;
     }

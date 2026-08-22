@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../../domain/models/user_role.dart';
-import '../pets/pet_detail_screen.dart';
+import '../../../core/config/app_services.dart';
+import '../../../domain/models/app_user.dart';
 import 'feature_catalog.dart';
-import 'module_screen.dart';
+import 'feature_router.dart';
 
 class ModuleHubScreen extends StatelessWidget {
-  const ModuleHubScreen({required this.role, super.key});
-  final UserRole role;
+  const ModuleHubScreen({
+    required this.user,
+    required this.services,
+    super.key,
+  });
+  final AppUser user;
+  final AppServices services;
 
   @override
   Widget build(BuildContext context) {
-    final features = FeatureCatalog.forRole(role);
+    final features = FeatureCatalog.forRole(user.role);
     return SafeArea(
       bottom: false,
       child: ListView(
@@ -24,7 +29,7 @@ class ModuleHubScreen extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Tools selected for your ${role.label.toLowerCase()} permissions.',
+            'Tools selected for your ${user.role.label.toLowerCase()} permissions.',
           ),
           const SizedBox(height: 22),
           ...features.map(
@@ -32,12 +37,12 @@ class ModuleHubScreen extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 12),
               child: InkWell(
                 onTap: () {
-                  final page = feature.title == 'My Pets'
-                      ? const PetDetailScreen()
-                      : ModuleScreen(feature: feature);
-                  Navigator.of(
+                  FeatureRouter.open(
                     context,
-                  ).push(MaterialPageRoute<void>(builder: (_) => page));
+                    feature: feature,
+                    user: user,
+                    services: services,
+                  );
                 },
                 borderRadius: BorderRadius.circular(24),
                 child: Ink(

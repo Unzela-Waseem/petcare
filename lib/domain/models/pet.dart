@@ -7,6 +7,9 @@ class Pet {
     required this.breed,
     required this.age,
     required this.gender,
+    this.photoPath,
+    this.photoUrl,
+    this.description = '',
   });
 
   final String id;
@@ -16,4 +19,31 @@ class Pet {
   final String breed;
   final int age;
   final String gender;
+  final String? photoPath;
+  final String? photoUrl;
+  final String description;
+
+  Pet copyWith({
+    String? id,
+    String? ownerId,
+    String? name,
+    String? species,
+    String? breed,
+    int? age,
+    String? gender,
+    String? photoPath,
+    String? photoUrl,
+    String? description,
+  }) => Pet(
+    id: id ?? this.id,
+    ownerId: ownerId ?? this.ownerId,
+    name: name ?? this.name,
+    species: species ?? this.species,
+    breed: breed ?? this.breed,
+    age: age ?? this.age,
+    gender: gender ?? this.gender,
+    photoPath: photoPath ?? this.photoPath,
+    photoUrl: photoUrl ?? this.photoUrl,
+    description: description ?? this.description,
+  );
 }

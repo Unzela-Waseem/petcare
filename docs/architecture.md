@@ -28,7 +28,8 @@ lib/
   app/
     pawfect_care_app.dart
   core/
-    config/app_environment.dart
+    config/
+    utils/
     theme/app_theme.dart
     widgets/
   domain/
@@ -40,11 +41,12 @@ lib/
   presentation/
     controllers/
     screens/
+      adoption/
+      appointments/
       auth/
+      content/
+      health/
       onboarding/
-      owner/
-      veterinarian/
-      shelter/
       pets/
       shared/
 assets/images/
@@ -54,6 +56,8 @@ firebase/
   firestore.indexes.json
 test/
 rules-tests/
+functions/
+web/firebase-messaging-sw.js
 ```
 
 Dependencies point inward: data knows domain contracts, presentation knows controllers and domain models, while domain does not import Flutter or Firebase.
@@ -82,24 +86,25 @@ Server timestamps are used for every `createdAt` and `updatedAt`. IDs shown belo
 
 | Collection | Required fields | Ownership / notes |
 |---|---|---|
-| `users/{uid}` | `uid`, `name`, `email`, `phone`, `role`, `accountStatus`, `photoUrl`, `createdAt`, `updatedAt` | Private self profile. `role`, `uid`, `email`, and `accountStatus` are immutable to clients. |
-| `publicProfiles/{uid}` | `uid`, `displayName`, `role`, `photoUrl`, `specialty`, `location` | Sanitized directory record, normally maintained by trusted backend. |
-| `pets/{petId}` | `ownerId`, `name`, `species`, `breed`, `age`, `gender`, `photoPath`, timestamps | Owner-only mutation. Vet reads require server-managed access grant. |
-| `petAccess/{petId}/veterinarians/{vetId}` | `petId`, `veterinarianId`, `appointmentId`, `active`, timestamps | Written only by trusted appointment automation; used by rules. |
-| `petHealthRecords/{recordId}` | `petId`, `veterinarianId`, `diagnosis`, `treatment`, `prescription`, `date`, timestamps | Assigned vet creates; owner and assigned vet read; shelter is denied. |
-| `appointments/{appointmentId}` | `petId`, `ownerId`, `veterinarianId`, `dateTime`, `reason`, `status`, timestamps | Owner creates for own pet. Party-specific status transitions are validated. |
-| `vetAvailability/{slotId}` | `veterinarianId`, `startAt`, `endAt`, `isBooked` | Vet owns slots; booking is finalized transactionally by trusted backend to prevent double booking. |
-| `shelters/{shelterId}` | `adminId`, `name`, `location`, `contact`, timestamps | Only its shelter admin mutates private shelter data. |
+| `users/{uid}` | `uid`, `name`, `email`, `phone`, `role`, `accountStatus`, `photoPath`, `photoUrl`, `notificationPreferences`, timestamps | Private self profile. Identity, role, email, and account status are immutable except the verified activation transition. |
+| `users/{uid}/devices/{deviceId}` | `userId`, `token`, `platform`, `updatedAt` | Private FCM registration-token records; deterministic token hashes are used as IDs. |
+| `publicProfiles/{uid}` | `uid`, `name`, `role`, `photoUrl`, `clinicName`, `specialty`, `location`, timestamps | Sanitized directory created atomically with the matching private role. |
+| `pets/{petId}` | `ownerId`, `name`, `species`, `breed`, `age`, `gender`, `description`, `photoPath`, `photoUrl`, timestamps | Owner-only mutation. Vet reads require an active appointment grant. |
+| `petAccess/{petId}/veterinarians/{vetId}` | `petId`, `veterinarianId`, `appointmentId`, `active`, timestamps | Created/updated only in the same atomic operation as a rule-valid appointment. |
+| `petHealthRecords/{recordId}` | `petId`, `createdBy`, `veterinarianId`, `type`, clinical fields, notes/dates, `reportPaths`, timestamps | Owners manage non-clinical routine records; assigned vets manage attributable clinical records; shelters are denied. |
+| `appointments/{appointmentId}` | `slotId`, optional `rescheduledFrom`, pet/owner/vet IDs and display names, `dateTime`, `reason`, `status`, timestamps | Booking/rescheduling is atomic with the slot and grant. Party-specific transitions are validated. |
+| `vetAvailability/{slotId}` | `veterinarianId`, `start`, `end`, `isBooked`, `bookingOwnerId`, `appointmentId`, timestamps | Vet owns open slots; booking/release is transactionally coupled to its appointment. |
+| `shelters/{shelterId}` | `adminId`, `name`, `location`, `phone`, `description`, timestamps | Only its shelter admin mutates the profile. |
 | `adoptionListings/{listingId}` | `shelterId`, `adminId`, pet fields, `healthStatus`, `status`, `photoPath`, timestamps | Authenticated users read published listings; owning shelter admin mutates. |
-| `adoptionRequests/{requestId}` | `listingId`, `petId`, `ownerId`, `shelterId`, `status`, `message`, timestamps | Owner creates/reads own; target shelter admin reads and changes status. |
-| `successStories/{storyId}` | `shelterId`, `adminId`, `title`, `body`, `imagePath`, `published`, timestamps | Published stories are readable; owning shelter admin mutates. |
-| `volunteerRequests/{requestId}` | `userId`, `shelterId`, contact fields, `status`, timestamps | Submitter and target shelter admin only. |
-| `contactMessages/{messageId}` | `userId`, `shelterId`, `subject`, `message`, `status`, timestamps | Submitter and target shelter admin only. |
-| `products/{productId}` | `name`, `description`, `price`, `category`, `imageUrl`, `externalUrl`, `active` | Authenticated read; trusted backend writes. |
+| `adoptionRequests/{requestId}` | listing/pet labels, `ownerId`, `shelterId`, `shelterAdminId`, `status`, `message`, timestamps | Owner creates/reads own; target shelter admin reads and changes status. |
+| `successStories/{storyId}` | `shelterId`, `adminId`, `title`, `story`, `photoPath`, `photoUrl`, `published`, timestamps | Published stories are readable; owning shelter admin mutates. |
+| `volunteerRequests/{requestId}` | shelter/admin/user IDs, `kind`, `message`, `status`, timestamps | Submitter and target shelter admin only; includes volunteer and donation interest. |
+| `contactMessages/{messageId}` | shelter/admin/user IDs, `kind`, `message`, `status`, timestamps | Submitter and target shelter admin only. |
+| `products/{productId}` | `name`, `description`, `price`, `category`, `imageUrl`, `purchaseUrl`, `active`, timestamps | Active items are authenticated-read; trusted backend writes. |
 | `wishlists/{uid}/items/{productId}` | `productId`, `createdAt` | User-private. |
-| `blogs/{blogId}` | `title`, `body`, `category`, `imageUrl`, `published`, timestamps | Authenticated read for published content; trusted backend writes. |
-| `bookmarks/{uid}/items/{blogId}` | `blogId`, `offlineSnapshot`, `createdAt` | User-private. |
-| `notifications/{uid}/items/{notificationId}` | `type`, `title`, `body`, `route`, `readAt`, `createdAt` | Trusted backend creates; recipient reads and marks read. |
+| `blogs/{blogId}` | `title`, `summary`, `content`, `category`, `imageUrl`, `published`, `publishedAt`, timestamps | Published content is authenticated-read; trusted backend writes. |
+| `bookmarks/{uid}/items/{blogId}` | `blogId`, `createdAt` | User-private; offline article bodies are cached locally. |
+| `notifications/{uid}/items/{notificationId}` | `type`, `title`, `body`, `resourceId`, `readAt`, `createdAt` | Functions create; recipient reads and marks read. |
 | `feedback/{feedbackId}` | `userId`, `type`, `message`, `createdAt` | User creates and reads own; no cross-user access. |
 
 Storage paths are document-linked, never public URLs: `users/{uid}/avatar/*`, `pets/{petId}/images/*`, `shelters/{shelterId}/images/*`, and `medical/{petId}/{recordId}/*`.
@@ -131,12 +136,12 @@ Every denied cell remains denied even if a client forges `uid`, `role`, `ownerId
 1. Require `request.auth != null` before all private operations.
 2. Obtain role from `/users/{request.auth.uid}`, never from request payload.
 3. Bind ownership to stored resource fields and prevent those fields from changing.
-4. Use deterministic `petAccess` grants created by trusted appointment automation for veterinarian access.
+4. Use deterministic `petAccess` grants accepted only when `getAfter()` proves that the same atomic write creates a matching appointment and books its slot.
 5. Validate required keys, enums, field types, timestamps, transition-specific changed keys, and query-compatible ownership constraints.
 6. Keep medical reports in protected Storage paths and validate MIME type and size. No download path is public.
 7. Keep catalog/blog/notification administration server-only because there is no fourth administrator role.
 8. Deny unmatched documents and paths by default.
-9. Use App Check, least-privilege service accounts, audit logging, FCM token rotation, and Firebase Emulator Suite rule tests before production release.
+9. Use least-privilege Functions, FCM token rotation/cleanup, deterministic reminder IDs, and Firebase Emulator Suite rule tests before production release.
 10. Queries must include the same owner/party constraints required by rules; rules are not filters.
 
 ## 6. Screen inventory
@@ -183,13 +188,13 @@ Every denied cell remains denied even if a client forges `uid`, `role`, `ownerId
 | Authentication | Register, verify, login, reset, logout | `users`, server-built `publicProfiles` | Verified, active user; strict role parser; root reset on logout | weak password rejected; unverified/disabled/unknown role denied; back after logout stays public |
 | Pets | Owner pet grid and editor | `pets`, protected image path | owner CRUD only; assigned vet read only | cross-owner read/update/delete denied; vet without grant denied |
 | Health | Timeline, record detail, reminders | `petHealthRecords`, medical Storage | owner read own; assigned vet writes attributable records | owner diagnosis write denied; unrelated vet and shelter denied |
-| Appointments | Search, book, calendar, reschedule | `appointments`, `vetAvailability`, access grant via server | only appointment parties; field-level state transitions | forged owner/vet denied; double booking rejected; invalid transition denied |
+| Appointments | Vet search, book/history, calendar, cancel/reschedule | `appointments`, `vetAvailability`, atomic access grant | only appointment parties; field-level state transitions | forged owner/vet denied; double booking rejected; slot release and invalid transitions tested |
 | Store | Catalog, filters, wishlist | `products`, `wishlists` | auth read; wishlist private; catalog server-write | other wishlist denied; client product mutation denied |
 | Care tips | Feed, filters, saved/offline reader | `blogs`, `bookmarks` | published auth read; bookmark private; publishing server-only | draft hidden; cross-user bookmark denied |
 | Adoption | Discovery, request, request review | `adoptionListings`, `adoptionRequests` | owner submits own; owning shelter admin decides | foreign admin denied; owner cannot approve; immutable parties enforced |
 | Shelter content | Listings and success-story editor | listings, `successStories`, shelter images | shelter admin limited to own `shelterId` | other shelter mutation denied; non-admin creation denied |
 | Volunteer/contact | Forms and shelter inbox | `volunteerRequests`, `contactMessages` | submitter and target shelter only | other user/shelter denied; immutable user/shelter IDs |
-| Notifications | Inbox and deep-link prompt | per-user notifications, FCM token service | recipient-only read; trusted sender; recipient mark-read only | cross-user read denied; client create denied |
+| Notifications | Inbox, preferences, mobile/web background delivery | per-user notifications, device tokens, Functions triggers/scheduler | recipient-only read; Functions send; recipient mark-read only | cross-user read denied; client create denied; Functions lint/emulator load |
 | Profile | Safe edits, photo, password change | `users`, avatar Storage, Firebase Auth | self only; role/status immutable | role escalation and cross-user edits denied |
 | Feedback | Suggestion/bug/feedback form | `feedback` | authenticated creator and owner-only read | forged user ID and cross-user read denied |
 
@@ -197,8 +202,9 @@ Every denied cell remains denied even if a client forges `uid`, `role`, `ownerId
 
 - `dart format`, `flutter analyze`, and Flutter unit/widget tests pass.
 - Firestore and Storage emulator authorization tests pass.
-- Android and iOS Firebase configuration files are installed outside source control where appropriate.
-- Firebase App Check is enforced after observing valid production traffic.
+- Android, iOS, and Web FlutterFire configuration is installed; iOS push still requires the project owner's APNs credential.
+- Web push uses the registered messaging service worker and requires the project owner's public VAPID key at build time.
+- Storage/Functions deployment requires the project owner to enable Blaze; the source and local verification remain release-ready until then.
 - Crash/analytics payloads contain no diagnoses, prescriptions, phone numbers, or message bodies.
 - Accessibility checks cover text scaling, contrast, focus order, semantic labels, and 48 dp touch targets.
 - A privacy review confirms data retention/deletion and medical-document access policies.

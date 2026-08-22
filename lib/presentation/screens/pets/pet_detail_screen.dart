@@ -1,17 +1,26 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/config/app_services.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/paw_button.dart';
+import '../../../domain/models/app_user.dart';
+import '../../../domain/models/care_models.dart';
+import '../../../domain/models/pet.dart';
+import '../../../domain/models/user_role.dart';
+import '../appointments/appointments_screen.dart';
+import '../health/health_records_screen.dart';
 
-class PetDetailScreen extends StatefulWidget {
-  const PetDetailScreen({super.key});
+class PetDetailScreen extends StatelessWidget {
+  const PetDetailScreen({
+    required this.pet,
+    required this.user,
+    required this.services,
+    super.key,
+  });
 
-  @override
-  State<PetDetailScreen> createState() => _PetDetailScreenState();
-}
-
-class _PetDetailScreenState extends State<PetDetailScreen> {
-  bool _favorite = true;
+  final Pet pet;
+  final AppUser user;
+  final AppServices services;
 
   @override
   Widget build(BuildContext context) {
@@ -20,86 +29,18 @@ class _PetDetailScreenState extends State<PetDetailScreen> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 355,
+            expandedHeight: 330,
             pinned: true,
             stretch: true,
             backgroundColor: AppColors.peach,
             surfaceTintColor: Colors.transparent,
-            leading: Padding(
-              padding: const EdgeInsets.all(7),
-              child: CircleAvatar(
-                backgroundColor: AppColors.surface,
-                child: IconButton(
-                  tooltip: 'Back',
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-                ),
-              ),
-            ),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.all(7),
-                child: CircleAvatar(
-                  backgroundColor: AppColors.surface,
-                  child: IconButton(
-                    tooltip: _favorite ? 'Remove favorite' : 'Add favorite',
-                    onPressed: () => setState(() => _favorite = !_favorite),
-                    icon: Icon(
-                      _favorite
-                          ? Icons.favorite_rounded
-                          : Icons.favorite_border_rounded,
-                      color: _favorite ? AppColors.danger : AppColors.ink,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-            flexibleSpace: FlexibleSpaceBar(
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  const ColoredBox(color: AppColors.peach),
-                  Positioned(
-                    right: -40,
-                    bottom: 22,
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        color: AppColors.orangeDeep.withValues(alpha: 0.18),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    left: -30,
-                    bottom: 80,
-                    child: Container(
-                      width: 90,
-                      height: 90,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface.withValues(alpha: 0.28),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(35, 55, 20, 0),
-                    child: Image.asset(
-                      'assets/images/pawfect_pet_family_cutout.png',
-                      fit: BoxFit.contain,
-                      alignment: Alignment.bottomCenter,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            flexibleSpace: FlexibleSpaceBar(background: _hero()),
           ),
           SliverToBoxAdapter(
             child: Transform.translate(
               offset: const Offset(0, -24),
               child: Container(
-                padding: const EdgeInsets.fromLTRB(22, 26, 22, 30),
+                padding: const EdgeInsets.fromLTRB(22, 26, 22, 34),
                 decoration: const BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(34)),
@@ -107,68 +48,35 @@ class _PetDetailScreenState extends State<PetDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(
+                      pet.name,
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                    const SizedBox(height: 5),
+                    Text('${pet.species} · ${pet.breed}'),
+                    const SizedBox(height: 22),
                     Row(
                       children: [
                         Expanded(
-                          child: Text(
-                            'Pet name: Luna',
-                            style: Theme.of(context).textTheme.headlineMedium,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 11,
-                            vertical: 7,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.mint,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: const Text(
-                            'Healthy',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 7),
-                    const Row(
-                      children: [
-                        Icon(
-                          Icons.location_on_outlined,
-                          size: 18,
-                          color: AppColors.muted,
-                        ),
-                        SizedBox(width: 5),
-                        Text('City Care Clinic · 0.9 km nearby'),
-                      ],
-                    ),
-                    const SizedBox(height: 22),
-                    const Row(
-                      children: [
-                        Expanded(
                           child: _PetFact(
-                            label: 'Female',
-                            caption: 'Sex',
+                            label: pet.gender,
+                            caption: 'Gender',
                             color: AppColors.lavender,
                           ),
                         ),
-                        SizedBox(width: 10),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: _PetFact(
-                            label: '3 years',
+                            label: '${pet.age} years',
                             caption: 'Age',
                             color: AppColors.yellow,
                           ),
                         ),
-                        SizedBox(width: 10),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: _PetFact(
-                            label: 'Husky',
-                            caption: 'Breed',
+                            label: pet.species,
+                            caption: 'Species',
                             color: AppColors.mint,
                           ),
                         ),
@@ -176,46 +84,61 @@ class _PetDetailScreenState extends State<PetDetailScreen> {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'About Luna',
+                      'About ${pet.name}',
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Luna is a snow-loving sweetheart who enjoys long walks, puzzle toys, and quiet evenings with her people. Her care plan is shared only with her owner and assigned veterinarian.',
+                    Text(
+                      pet.description.isEmpty
+                          ? 'No additional care notes have been added.'
+                          : pet.description,
                     ),
-                    const SizedBox(height: 22),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.cream,
-                        borderRadius: BorderRadius.circular(22),
-                      ),
-                      child: const Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: AppColors.peachLight,
-                            child: Icon(
-                              Icons.vaccines_outlined,
-                              color: AppColors.orangeDeep,
+                    const SizedBox(height: 24),
+                    StreamBuilder<List<HealthRecord>>(
+                      stream: services.care.watchHealthRecords(pet.id),
+                      builder: (context, snapshot) {
+                        final upcoming =
+                            (snapshot.data ?? const <HealthRecord>[])
+                                .where((record) => record.dueDate != null)
+                                .toList()
+                              ..sort(
+                                (a, b) => a.dueDate!.compareTo(b.dueDate!),
+                              );
+                        final record = upcoming.isEmpty ? null : upcoming.first;
+                        return _CareCard(
+                          title: record == null
+                              ? 'Health records'
+                              : 'Next ${record.type.label.toLowerCase()}',
+                          detail: record == null
+                              ? 'Open the protected care timeline.'
+                              : '${record.title} · ${_day(record.dueDate!)}',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => HealthRecordsScreen(
+                                user: user,
+                                services: services,
+                                initialPet: pet,
+                              ),
                             ),
                           ),
-                          SizedBox(width: 13),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Next care reminder',
-                                  style: TextStyle(fontWeight: FontWeight.w800),
-                                ),
-                                SizedBox(height: 3),
-                                Text('Rabies booster · due in 7 days'),
-                              ],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    const Row(
+                      children: [
+                        Icon(Icons.lock_outline_rounded, size: 18),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Visible only to the owner and explicitly assigned veterinarian.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.muted,
                             ),
                           ),
-                          Icon(Icons.arrow_forward_ios_rounded, size: 16),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -224,44 +147,103 @@ class _PetDetailScreenState extends State<PetDetailScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 26,
-                backgroundColor: AppColors.ink,
-                child: IconButton(
-                  tooltip: 'Call veterinarian',
-                  onPressed: () => _notice(
-                    context,
-                    'Calling is available after clinic contact setup.',
-                  ),
-                  icon: const Icon(Icons.call_outlined, color: Colors.white),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
+      bottomNavigationBar: user.role == UserRole.petOwner
+          ? SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
                 child: PawButton(
-                  label: 'Book Care',
-                  onPressed: () => _notice(
-                    context,
-                    'Choose a veterinarian and time from Appointments.',
+                  label: 'Book Veterinary Care',
+                  icon: Icons.calendar_month_outlined,
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => AppointmentsScreen(
+                        user: user,
+                        services: services,
+                        initialPet: pet,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
+            )
+          : null,
     );
   }
 
-  void _notice(BuildContext context, String message) => ScaffoldMessenger.of(
-    context,
-  ).showSnackBar(SnackBar(content: Text(message)));
+  Widget _hero() {
+    if (pet.photoUrl != null && pet.photoUrl!.isNotEmpty) {
+      return Container(
+        color: AppColors.peach,
+        child: Image.network(
+          pet.photoUrl!,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => _fallbackHero(),
+        ),
+      );
+    }
+    return _fallbackHero();
+  }
+
+  Widget _fallbackHero() => Container(
+    color: AppColors.peach,
+    padding: const EdgeInsets.fromLTRB(35, 60, 20, 0),
+    child: Image.asset(
+      'assets/images/pawfect_pet_family_cutout.png',
+      fit: BoxFit.contain,
+      alignment: Alignment.bottomCenter,
+    ),
+  );
+
+  String _day(DateTime date) =>
+      '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+}
+
+class _CareCard extends StatelessWidget {
+  const _CareCard({
+    required this.title,
+    required this.detail,
+    required this.onTap,
+  });
+  final String title;
+  final String detail;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(22),
+    child: Ink(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cream,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Row(
+        children: [
+          const CircleAvatar(
+            backgroundColor: AppColors.peachLight,
+            child: Icon(Icons.vaccines_outlined, color: AppColors.orangeDeep),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 3),
+                Text(detail),
+              ],
+            ),
+          ),
+          const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+        ],
+      ),
+    ),
+  );
 }
 
 class _PetFact extends StatelessWidget {
@@ -275,23 +257,26 @@ class _PetFact extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 8),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
-          const SizedBox(height: 4),
-          Text(
-            caption,
-            style: const TextStyle(fontSize: 12, color: AppColors.muted),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 7),
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(18),
+    ),
+    child: Column(
+      children: [
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          caption,
+          style: const TextStyle(fontSize: 12, color: AppColors.muted),
+        ),
+      ],
+    ),
+  );
 }

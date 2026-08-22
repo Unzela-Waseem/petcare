@@ -35,8 +35,13 @@ class DemoAuthRepository implements AuthRepository {
       UserRole.veterinarian: 'Dr. Maya Chen',
       UserRole.shelterAdmin: 'Alex Morgan',
     };
+    final userIds = {
+      UserRole.petOwner: 'demo-owner',
+      UserRole.veterinarian: 'demo-veterinarian',
+      UserRole.shelterAdmin: 'demo-shelterAdmin',
+    };
     return _currentUser = AppUser(
-      uid: 'demo-${role.value}',
+      uid: userIds[role]!,
       name: names[role]!,
       email: '${role.value}@pawfectcare.demo',
       phone: '+1 555 010 2026',
@@ -81,6 +86,12 @@ class DemoAuthRepository implements AuthRepository {
   Future<void> resetPassword(String email) async {
     if (!email.contains('@')) throw const AuthFailure('Enter a valid email.');
   }
+
+  @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {}
 
   @override
   Future<void> signOut() async => _currentUser = null;

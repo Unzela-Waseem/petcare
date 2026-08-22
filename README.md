@@ -14,16 +14,20 @@ The UI follows a warm editorial pet-care system: cream canvases, peach feature p
 - Secure login, registration, password reset, email-verification gate, session restoration, and logout stack reset
 - Registration restricted to the three specified roles
 - Role-specific dashboards, navigation, tools, copy, and privacy messaging
-- Pet profile/detail and health-reminder experience
-- Appointment, clinical history, availability, store, care-tip, adoption, shelter, volunteer, contact, notification, saved-item, messaging, and profile surfaces
+- Firebase-backed pet CRUD, protected health timelines, due dates, and clinical documents
+- Veterinarian directory search, atomic booking/cancellation/rescheduling, availability management, and appointment history
+- Product search/filter/wishlist/external HTTPS links, plus care-tip search/filter/bookmark/offline reading
+- Adoption listings/requests, shelter profiles, success stories, volunteer/donation requests, and shelter inquiries
+- Profile editing/photo, recent-login password changes, notification preferences, feedback, and Google Maps links
 - Firebase Authentication and private profile adapter
 - Firebase Cloud Messaging permission, token rotation, per-device storage, and logout cleanup
 - Strict Firestore and Storage rules with deny-by-default behavior
-- Firestore composite indexes
-- Flutter unit/widget tests and Firestore Emulator authorization tests
+- Trusted Cloud Functions for appointment, vaccine, adoption, and blog notifications
+- Firestore composite indexes and seeded production store/care-tip content
+- Flutter unit/widget tests and 19 Firestore/Storage Emulator authorization tests
 - A deterministic demo mode that never touches production data
 
-The complete architecture, schema, role matrix, screen inventory, per-feature security contract, and release gates live in [`docs/architecture.md`](docs/architecture.md).
+The complete architecture and security contract live in [`docs/architecture.md`](docs/architecture.md). The specification-by-specification completion evidence and remaining account-owner release actions are in [`docs/requirements-matrix.md`](docs/requirements-matrix.md).
 
 ## Run the design demo
 
@@ -44,13 +48,14 @@ The repository is connected to Firebase project `pawfectcare-unzela-2026`:
 - Email/Password Authentication is enabled and requires a password.
 - The default Standard Firestore database is in `asia-south1` (Mumbai) with deletion protection enabled.
 - Firestore rules and composite indexes are deployed.
+- Four store products and four published care guides are live in Firestore.
 - Cloud Messaging, Firebase Installations, and Cloud Storage APIs are enabled.
 - The generated Firebase client configuration is checked in. These client identifiers are not server credentials; authorization remains enforced by Firebase Authentication and the checked-in rules.
 
-Cloud Storage for Firebase requires the Blaze plan for projects created under the current Firebase policy. After linking a billing account, provision the default bucket in the Firebase Console and deploy the checked-in Storage rules:
+Cloud Storage and Cloud Functions require the Blaze plan for projects created under the current Firebase policy. The complete Storage rules and notification Functions are checked in and pass local emulator/lint/security verification, but Firebase rejected their live deployment while this project remains on Spark. After linking a billing account, provision the default Storage bucket and deploy both:
 
 ```bash
-firebase deploy --only storage
+firebase deploy --only storage,functions
 ```
 
 Configure APNs separately before testing push notifications on iOS. For Web Push, pass the Firebase Web Push certificate's public VAPID key as a build-time value.
@@ -71,7 +76,7 @@ flutter run -d chrome \
 
 Demo builds continue to work without Firebase configuration.
 
-Production catalog publishing, role/account administration, veterinarian access grants, double-booking prevention, and notification fan-out are intentionally server-only operations. Implement those with trusted Cloud Functions or another Admin SDK service; never grant a fourth client role broad write access.
+Catalog/blog publishing, role/account administration, and notification fan-out remain trusted-backend-only. Appointment booking and veterinarian grants are committed atomically and verified with `getAfter()` rules, so a client cannot grant access without a valid appointment or book one slot twice.
 
 ## Verification
 
@@ -81,9 +86,12 @@ flutter analyze
 flutter test
 npm install
 PATH=/path/to/jdk/bin:$PATH npm run test:rules
+npm --prefix functions install
+npm --prefix functions run check
+npm --prefix functions run lint
 ```
 
-The rules suite verifies signed-out denial, pet ownership isolation, veterinarian assignment boundaries, shelter denial from medical data, prevention of role escalation, and shelter ownership boundaries.
+The rules suites verify registration consistency, signed-out denial, pet ownership isolation, routine-versus-clinical health fields, veterinarian assignment boundaries, atomic booking/rescheduling/cancellation, role escalation denial, catalog/notification server ownership, MIME/size restrictions, private medical files, and shelter isolation.
 
 ## Security notes
 

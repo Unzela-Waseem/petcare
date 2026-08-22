@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/config/app_services.dart';
 import '../../../core/widgets/section_heading.dart';
 import '../../../domain/models/app_user.dart';
 import '../../../domain/models/user_role.dart';
-import '../pets/pet_detail_screen.dart';
 import 'feature_catalog.dart';
-import 'module_screen.dart';
+import 'feature_router.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({required this.user, super.key});
+  const DashboardScreen({
+    required this.user,
+    required this.services,
+    super.key,
+  });
 
   final AppUser user;
+  final AppServices services;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -36,7 +41,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 110),
             sliver: SliverList.list(
               children: [
-                _Header(user: widget.user),
+                _Header(
+                  user: widget.user,
+                  onNotifications: () => _openFeature(
+                    context,
+                    FeatureCatalog.forRole(
+                      widget.user.role,
+                    ).firstWhere((item) => item.title == 'Notifications'),
+                  ),
+                ),
                 const SizedBox(height: 22),
                 TextField(
                   onChanged: (value) => setState(() => _query = value),
@@ -52,18 +65,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 _HeroCard(
                   role: widget.user.role,
                   onTap: () {
-                    if (widget.user.role == UserRole.petOwner) {
-                      Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const PetDetailScreen(),
-                        ),
-                      );
-                    } else {
-                      _openFeature(
-                        context,
-                        FeatureCatalog.forRole(widget.user.role).first,
-                      );
-                    }
+                    _openFeature(
+                      context,
+                      FeatureCatalog.forRole(widget.user.role).first,
+                    );
                   },
                 ),
                 const SizedBox(height: 24),
@@ -118,21 +123,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
   };
 
   void _openFeature(BuildContext context, FeatureAction feature) {
-    if (feature.title == 'My Pets') {
-      Navigator.of(
-        context,
-      ).push(MaterialPageRoute<void>(builder: (_) => const PetDetailScreen()));
-      return;
-    }
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => ModuleScreen(feature: feature)),
+    FeatureRouter.open(
+      context,
+      feature: feature,
+      user: widget.user,
+      services: widget.services,
     );
   }
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.user});
+  const _Header({required this.user, required this.onNotifications});
   final AppUser user;
+  final VoidCallback onNotifications;
 
   @override
   Widget build(BuildContext context) {
@@ -176,16 +179,7 @@ class _Header extends StatelessWidget {
               backgroundColor: AppColors.surface,
               foregroundColor: AppColors.ink,
             ),
-            onPressed: () {
-              final feature = FeatureCatalog.forRole(
-                user.role,
-              ).firstWhere((item) => item.title == 'Notifications');
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => ModuleScreen(feature: feature),
-                ),
-              );
-            },
+            onPressed: onNotifications,
             icon: const Icon(Icons.notifications_none_rounded),
           ),
         ),

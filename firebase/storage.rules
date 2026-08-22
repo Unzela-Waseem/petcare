@@ -21,12 +21,12 @@ service firebase.storage {
     }
 
     function validImage() {
-      return request.resource.size < 5 * 1024 * 1024
+      return request.resource.size <= 5 * 1024 * 1024
         && request.resource.contentType.matches('image/(jpeg|png|webp)');
     }
 
     function validMedicalFile() {
-      return request.resource.size < 10 * 1024 * 1024
+      return request.resource.size <= 10 * 1024 * 1024
         && request.resource.contentType.matches('(image/(jpeg|png|webp)|application/pdf)');
     }
 
@@ -40,7 +40,8 @@ service firebase.storage {
 
     function vetAccess(petId) {
       return role('veterinarian')
-        && firestore.exists(/databases/(default)/documents/petAccess/$(petId)/veterinarians/$(request.auth.uid));
+        && firestore.exists(/databases/(default)/documents/petAccess/$(petId)/veterinarians/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/petAccess/$(petId)/veterinarians/$(request.auth.uid)).data.active == true;
     }
 
     function ownsShelter(shelterId) {

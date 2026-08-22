@@ -147,6 +147,38 @@ class AuthController extends ChangeNotifier {
     }
   }
 
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    busy = true;
+    message = null;
+    notifyListeners();
+    try {
+      await _authRepository.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+      message = 'Your password has been changed securely.';
+      return true;
+    } on AuthFailure catch (error) {
+      message = error.message;
+      return false;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  void updateLocalProfile({
+    required String name,
+    required String phone,
+    String? photoUrl,
+  }) {
+    user = user?.copyWith(name: name, phone: phone, photoUrl: photoUrl);
+    notifyListeners();
+  }
+
   Future<void> signOut() async {
     busy = true;
     notifyListeners();

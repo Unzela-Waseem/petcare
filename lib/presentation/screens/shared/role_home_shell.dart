@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/config/app_services.dart';
 import '../../../domain/models/app_user.dart';
 import '../../controllers/auth_controller.dart';
 import 'dashboard_screen.dart';
@@ -13,11 +14,13 @@ class RoleHomeShell extends StatefulWidget {
   const RoleHomeShell({
     required this.user,
     required this.controller,
+    required this.services,
     super.key,
   });
 
   final AppUser user;
   final AuthController controller;
+  final AppServices services;
 
   @override
   State<RoleHomeShell> createState() => _RoleHomeShellState();
@@ -29,11 +32,15 @@ class _RoleHomeShellState extends State<RoleHomeShell> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      DashboardScreen(user: widget.user),
-      ModuleHubScreen(role: widget.user.role),
-      SavedUpdatesScreen(role: widget.user.role),
-      InboxScreen(role: widget.user.role),
-      ProfileScreen(user: widget.user, controller: widget.controller),
+      DashboardScreen(user: widget.user, services: widget.services),
+      ModuleHubScreen(user: widget.user, services: widget.services),
+      SavedUpdatesScreen(user: widget.user, services: widget.services),
+      InboxScreen(user: widget.user, services: widget.services),
+      ProfileScreen(
+        user: widget.user,
+        controller: widget.controller,
+        services: widget.services,
+      ),
     ];
     return Scaffold(
       backgroundColor: AppColors.cream,

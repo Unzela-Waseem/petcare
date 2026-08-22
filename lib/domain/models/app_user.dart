@@ -21,14 +21,20 @@ class AppUser {
   final String accountStatus;
   final String? photoUrl;
 
-  AppUser copyWith({bool? emailVerified, String? accountStatus}) => AppUser(
+  AppUser copyWith({
+    String? name,
+    String? phone,
+    bool? emailVerified,
+    String? accountStatus,
+    String? photoUrl,
+  }) => AppUser(
     uid: uid,
-    name: name,
+    name: name ?? this.name,
     email: email,
-    phone: phone,
+    phone: phone ?? this.phone,
     role: role,
     emailVerified: emailVerified ?? this.emailVerified,
     accountStatus: accountStatus ?? this.accountStatus,
-    photoUrl: photoUrl,
+    photoUrl: photoUrl ?? this.photoUrl,
   );
 }

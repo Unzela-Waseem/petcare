@@ -1,0 +1,83 @@
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
+
+class PickedMedia {
+  const PickedMedia({
+    required this.name,
+    required this.bytes,
+    required this.contentType,
+  });
+
+  final String name;
+  final Uint8List bytes;
+  final String contentType;
+}
+
+abstract final class MediaPicker {
+  static Future<PickedMedia?> image() async {
+    final image = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1800,
+      imageQuality: 88,
+    );
+    if (image == null) return null;
+    final bytes = await image.readAsBytes();
+    if (bytes.lengthInBytes >= 5 * 1024 * 1024) {
+      throw const FormatException('Images must be smaller than 5 MB.');
+    }
+    final contentType = _imageType(image.name, image.mimeType);
+    return PickedMedia(
+      name: _safeName(image.name),
+      bytes: bytes,
+      contentType: contentType,
+    );
+  }
+
+  static Future<PickedMedia?> medicalDocument() async {
+    final file = await FilePicker.pickFile(
+      type: FileType.custom,
+      allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
+    );
+    if (file == null) return null;
+    final bytes = await file.readAsBytes();
+    if (bytes.lengthInBytes >= 10 * 1024 * 1024) {
+      throw const FormatException('Medical files must be smaller than 10 MB.');
+    }
+    final extension = file.name.contains('.')
+        ? file.name.split('.').last.toLowerCase()
+        : '';
+    final contentType = switch (extension) {
+      'pdf' => 'application/pdf',
+      'jpg' || 'jpeg' => 'image/jpeg',
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      _ => throw const FormatException('Choose a PDF, JPG, PNG, or WebP file.'),
+    };
+    return PickedMedia(
+      name: _safeName(file.name),
+      bytes: bytes,
+      contentType: contentType,
+    );
+  }
+
+  static String _imageType(String name, String? supplied) {
+    if (supplied == 'image/jpeg' ||
+        supplied == 'image/png' ||
+        supplied == 'image/webp') {
+      return supplied!;
+    }
+    final extension = name.split('.').last.toLowerCase();
+    return switch (extension) {
+      'jpg' || 'jpeg' => 'image/jpeg',
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      _ => throw const FormatException('Choose a JPG, PNG, or WebP image.'),
+    };
+  }
+
+  static String _safeName(String name) => name
+      .replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_')
+      .replaceAll(RegExp(r'_+'), '_');
+}

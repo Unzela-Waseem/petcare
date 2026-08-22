@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/config/app_environment.dart';
+import '../core/config/app_services.dart';
 import '../core/theme/app_theme.dart';
 import '../presentation/controllers/auth_controller.dart';
 import '../presentation/screens/auth/login_screen.dart';
@@ -10,9 +11,14 @@ import '../presentation/screens/shared/role_home_shell.dart';
 import '../presentation/screens/shared/splash_screen.dart';
 
 class PawfectCareApp extends StatefulWidget {
-  const PawfectCareApp({required this.authController, super.key});
+  PawfectCareApp({
+    required this.authController,
+    AppServices? services,
+    super.key,
+  }) : services = services ?? AppServices.demo();
 
   final AuthController authController;
+  final AppServices services;
 
   @override
   State<PawfectCareApp> createState() => _PawfectCareAppState();
@@ -54,6 +60,7 @@ class _PawfectCareAppState extends State<PawfectCareApp> {
             AuthStage.authenticated => RoleHomeShell(
               user: controller.user!,
               controller: controller,
+              services: widget.services,
             ),
           },
         );

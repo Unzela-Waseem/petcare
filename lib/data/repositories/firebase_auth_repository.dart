@@ -50,14 +50,21 @@ class FirebaseAuthRepository implements AuthRepository {
     required String password,
     required UserRole role,
   }) async {
+    firebase.User? createdUser;
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
       final user = credential.user!;
-      await user.updateDisplayName(name.trim());
-      await _db.collection('users').doc(user.uid).set({
+      createdUser = user;
+      try {
+        await user.updateDisplayName(name.trim());
+      } on firebase.FirebaseAuthException {
+        // The Firestore profile remains the display-name source of truth.
+      }
+      final batch = _db.batch();
+      batch.set(_db.collection('users').doc(user.uid), {
         'uid': user.uid,
         'name': name.trim(),
         'email': email.trim().toLowerCase(),
@@ -68,7 +75,36 @@ class FirebaseAuthRepository implements AuthRepository {
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
-      await user.sendEmailVerification();
+      batch.set(_db.collection('publicProfiles').doc(user.uid), {
+        'uid': user.uid,
+        'name': name.trim(),
+        'role': role.value,
+        'photoUrl': null,
+        'clinicName': role == UserRole.veterinarian ? 'Independent clinic' : '',
+        'specialty': role == UserRole.veterinarian
+            ? 'Companion animal care'
+            : '',
+        'location': '',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      try {
+        await batch.commit();
+      } on Object {
+        try {
+          await user.delete();
+        } on Object {
+          // Login still fails closed because no private profile exists.
+        }
+        throw const AuthFailure(
+          'Your secure profile could not be created. Please try again.',
+        );
+      }
+      try {
+        await user.sendEmailVerification();
+      } on firebase.FirebaseAuthException {
+        // The verification screen offers a safe resend action.
+      }
       return AppUser(
         uid: user.uid,
         name: name.trim(),
@@ -79,6 +115,15 @@ class FirebaseAuthRepository implements AuthRepository {
         accountStatus: 'pendingEmailVerification',
       );
     } on firebase.FirebaseAuthException catch (error) {
+      if (createdUser != null &&
+          _auth.currentUser?.uid == createdUser.uid &&
+          error.code != 'too-many-requests') {
+        try {
+          await createdUser.delete();
+        } on Object {
+          // Best-effort rollback; incomplete profiles fail closed on login.
+        }
+      }
       throw AuthFailure(_safeAuthMessage(error.code));
     }
   }
@@ -108,6 +153,28 @@ class FirebaseAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final user = _auth.currentUser;
+    final email = user?.email;
+    if (user == null || email == null) {
+      throw const AuthFailure('Your session has expired.');
+    }
+    try {
+      final credential = firebase.EmailAuthProvider.credential(
+        email: email,
+        password: currentPassword,
+      );
+      await user.reauthenticateWithCredential(credential);
+      await user.updatePassword(newPassword);
+    } on firebase.FirebaseAuthException catch (error) {
+      throw AuthFailure(_safeAuthMessage(error.code));
+    }
+  }
+
+  @override
   Future<void> signOut() => _auth.signOut();
 
   Future<AppUser> _loadProfile(firebase.User user) async {
@@ -128,6 +195,7 @@ class FirebaseAuthRepository implements AuthRepository {
       throw const AuthFailure('This account is disabled.');
     }
     if (user.emailVerified && status == 'pendingEmailVerification') {
+      await user.getIdToken(true);
       await snapshot.reference.update({
         'accountStatus': 'active',
         'updatedAt': FieldValue.serverTimestamp(),

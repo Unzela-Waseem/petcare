@@ -1,6 +1,50 @@
 {
   "indexes": [
     {
+      "collectionGroup": "appointments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dateTime",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "petHealthRecords",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "type",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dueDate",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "veterinarians",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "veterinarianId", "order": "ASCENDING" },
+        { "fieldPath": "active", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "vetAvailability",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "veterinarianId", "order": "ASCENDING" },
+        { "fieldPath": "start", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "pets",
       "queryScope": "COLLECTION",
       "fields": [

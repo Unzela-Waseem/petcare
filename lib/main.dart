@@ -4,10 +4,15 @@ import 'package:flutter/material.dart';
 
 import 'app/pawfect_care_app.dart';
 import 'core/config/app_environment.dart';
+import 'core/config/app_services.dart';
 import 'data/repositories/demo_auth_repository.dart';
+import 'data/repositories/demo_care_repository.dart';
 import 'data/repositories/firebase_auth_repository.dart';
+import 'data/repositories/firebase_care_repository.dart';
+import 'data/services/firebase_media_storage_service.dart';
 import 'data/services/firebase_push_notification_service.dart';
 import 'data/services/session_store.dart';
+import 'data/services/shared_preferences_offline_article_service.dart';
 import 'domain/repositories/auth_repository.dart';
 import 'domain/repositories/push_notification_service.dart';
 import 'firebase_options.dart';
@@ -18,6 +23,7 @@ Future<void> main() async {
 
   late final AuthRepository authRepository;
   late final PushNotificationService pushNotifications;
+  late final AppServices services;
   if (AppEnvironment.usesFirebase) {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -25,9 +31,19 @@ Future<void> main() async {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
     authRepository = FirebaseAuthRepository();
     pushNotifications = FirebasePushNotificationService();
+    services = AppServices(
+      care: FirebaseCareRepository(),
+      media: FirebaseMediaStorageService(),
+      offlineArticles: SharedPreferencesOfflineArticleService(),
+    );
   } else {
     authRepository = DemoAuthRepository();
     pushNotifications = const NoopPushNotificationService();
+    services = AppServices(
+      care: DemoCareRepository(),
+      media: const DemoMediaStorageService(),
+      offlineArticles: SharedPreferencesOfflineArticleService(),
+    );
   }
 
   final controller = AuthController(
@@ -35,5 +51,5 @@ Future<void> main() async {
     sessionStore: const SecureSessionStore(),
     pushNotifications: pushNotifications,
   );
-  runApp(PawfectCareApp(authController: controller));
+  runApp(PawfectCareApp(authController: controller, services: services));
 }
