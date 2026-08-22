@@ -7,9 +7,38 @@
     "rules": "firebase/storage.rules"
   },
   "emulators": {
-    "auth": { "port": 9099 },
-    "firestore": { "port": 8080 },
-    "storage": { "port": 9199 },
-    "ui": { "enabled": false }
+    "auth": {
+      "port": 9099
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "storage": {
+      "port": 9199
+    },
+    "ui": {
+      "enabled": false
+    }
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "pawfectcare-unzela-2026",
+          "appId": "1:292981245129:android:33e70096950e9ce627f918",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "pawfectcare-unzela-2026",
+          "configurations": {
+            "android": "1:292981245129:android:33e70096950e9ce627f918",
+            "ios": "1:292981245129:ios:c4866871522ccbd927f918",
+            "web": "1:292981245129:web:5ccef1aafe8f53d927f918"
+          }
+        }
+      }
+    }
   }
 }

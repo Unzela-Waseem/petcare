@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "292981245129",
+    "project_id": "pawfectcare-unzela-2026",
+    "storage_bucket": "pawfectcare-unzela-2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:292981245129:android:33e70096950e9ce627f918",
+        "android_client_info": {
+          "package_name": "com.pawfectcare.app.pawfect_care"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBmu0kc2C3pY6scF_-uN218bEMcI6VdICU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

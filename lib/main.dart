@@ -10,6 +10,7 @@ import 'data/services/firebase_push_notification_service.dart';
 import 'data/services/session_store.dart';
 import 'domain/repositories/auth_repository.dart';
 import 'domain/repositories/push_notification_service.dart';
+import 'firebase_options.dart';
 import 'presentation/controllers/auth_controller.dart';
 
 Future<void> main() async {
@@ -18,7 +19,9 @@ Future<void> main() async {
   late final AuthRepository authRepository;
   late final PushNotificationService pushNotifications;
   if (AppEnvironment.usesFirebase) {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
     authRepository = FirebaseAuthRepository();
     pushNotifications = FirebasePushNotificationService();
