@@ -36,25 +36,40 @@ flutter run
 
 On the login screen, use the Pet Owner, Veterinarian, or Shelter Admin demo button to inspect that role. The sample email/password fields also open the Pet Owner dashboard.
 
-## Configure production Firebase
+## Connected production Firebase
 
-1. Create a Firebase project and register the Android and iOS bundle identifiers under `com.pawfectcare.app.pawfect_care`.
-2. Enable Email/Password Authentication, Cloud Firestore, Cloud Storage, and Cloud Messaging.
-3. Add `google-services.json` to `android/app/` and `GoogleService-Info.plist` to `ios/Runner/` using the normal FlutterFire setup. Do not commit environment-specific credentials.
-4. Configure APNs for iOS and pass the Web Push VAPID key only when targeting web.
-5. Deploy the checked-in rules and indexes:
+The repository is connected to Firebase project `pawfectcare-unzela-2026`:
+
+- Android, iOS, and Web apps are registered through FlutterFire.
+- Email/Password Authentication is enabled and requires a password.
+- The default Standard Firestore database is in `asia-south1` (Mumbai) with deletion protection enabled.
+- Firestore rules and composite indexes are deployed.
+- Cloud Messaging, Firebase Installations, and Cloud Storage APIs are enabled.
+- The generated Firebase client configuration is checked in. These client identifiers are not server credentials; authorization remains enforced by Firebase Authentication and the checked-in rules.
+
+Cloud Storage for Firebase requires the Blaze plan for projects created under the current Firebase policy. After linking a billing account, provision the default bucket in the Firebase Console and deploy the checked-in Storage rules:
 
 ```bash
-firebase deploy --only firestore:rules,firestore:indexes,storage
+firebase deploy --only storage
 ```
 
-6. Run the mobile app against Firebase:
+Configure APNs separately before testing push notifications on iOS. For Web Push, pass the Firebase Web Push certificate's public VAPID key as a build-time value.
+
+Run the app against Firebase:
 
 ```bash
 flutter run --dart-define=USE_FIREBASE=true
 ```
 
-For a Firebase-enabled web build, initialize Firebase with the generated web options in `main.dart` before enabling `USE_FIREBASE`; demo web builds need no Firebase configuration.
+For Web Push:
+
+```bash
+flutter run -d chrome \
+  --dart-define=USE_FIREBASE=true \
+  --dart-define=FCM_WEB_VAPID_KEY=YOUR_PUBLIC_VAPID_KEY
+```
+
+Demo builds continue to work without Firebase configuration.
 
 Production catalog publishing, role/account administration, veterinarian access grants, double-booking prevention, and notification fan-out are intentionally server-only operations. Implement those with trusted Cloud Functions or another Admin SDK service; never grant a fourth client role broad write access.
 

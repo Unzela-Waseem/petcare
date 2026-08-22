@@ -9,10 +9,11 @@ import 'package:flutter/foundation.dart';
 
 import '../../core/config/app_environment.dart';
 import '../../domain/repositories/push_notification_service.dart';
+import '../../firebase_options.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 }
 
 class FirebasePushNotificationService implements PushNotificationService {
