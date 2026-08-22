@@ -1,0 +1,79 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userData() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function active() {
+      return signedIn()
+        && userData().accountStatus == 'active'
+        && request.auth.token.email_verified == true;
+    }
+
+    function role(value) {
+      return active() && userData().role == value;
+    }
+
+    function validImage() {
+      return request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+    }
+
+    function validMedicalFile() {
+      return request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('(image/(jpeg|png|webp)|application/pdf)');
+    }
+
+    function petData(petId) {
+      return firestore.get(/databases/(default)/documents/pets/$(petId)).data;
+    }
+
+    function ownsPet(petId) {
+      return active() && petData(petId).ownerId == request.auth.uid;
+    }
+
+    function vetAccess(petId) {
+      return role('veterinarian')
+        && firestore.exists(/databases/(default)/documents/petAccess/$(petId)/veterinarians/$(request.auth.uid));
+    }
+
+    function ownsShelter(shelterId) {
+      return role('shelterAdmin')
+        && firestore.get(/databases/(default)/documents/shelters/$(shelterId)).data.adminId == request.auth.uid;
+    }
+
+    match /users/{uid}/avatar/{fileName} {
+      allow read: if active() && request.auth.uid == uid;
+      allow create, update: if active() && request.auth.uid == uid && validImage();
+      allow delete: if active() && request.auth.uid == uid;
+    }
+
+    match /pets/{petId}/images/{fileName} {
+      allow read: if ownsPet(petId) || vetAccess(petId);
+      allow create, update: if role('petOwner') && ownsPet(petId) && validImage();
+      allow delete: if role('petOwner') && ownsPet(petId);
+    }
+
+    match /medical/{petId}/{recordId}/{fileName} {
+      allow read: if ownsPet(petId) || vetAccess(petId);
+      allow create, update: if vetAccess(petId) && validMedicalFile();
+      allow delete: if vetAccess(petId);
+    }
+
+    match /shelters/{shelterId}/images/{fileName} {
+      allow read: if active();
+      allow create, update: if ownsShelter(shelterId) && validImage();
+      allow delete: if ownsShelter(shelterId);
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
