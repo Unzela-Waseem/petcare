@@ -37,6 +37,9 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> {
   void initState() {
     super.initState();
     _selectedPet = widget.initialPet;
+    if (widget.user.role == UserRole.veterinarian) {
+      _filter = HealthRecordType.medical;
+    }
   }
 
   @override
@@ -154,8 +157,10 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> {
                       return matchesType && searchable.contains(query);
                     }).toList();
                     if (records.isEmpty) {
-                      return const Center(
-                        child: Text('No health records yet.'),
+                      return _EmptyRecords(
+                        clinical:
+                            widget.user.role == UserRole.veterinarian &&
+                            _filter == HealthRecordType.medical,
                       );
                     }
                     return ListView.separated(
@@ -168,9 +173,10 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> {
                           record: record,
                           onTap: () => _details(record),
                           onDelete: () => _delete(record),
-                          canDelete:
-                              widget.user.role == UserRole.veterinarian ||
-                              record.type != HealthRecordType.medical,
+                          canDelete: widget.user.role == UserRole.veterinarian
+                              ? record.veterinarianId == widget.user.uid
+                              : record.veterinarianId == null &&
+                                    record.type != HealthRecordType.medical,
                         );
                       },
                     );
@@ -278,6 +284,12 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> {
               if (record.dueDate != null) ...[
                 const SizedBox(height: 14),
                 Text('Due ${DateFormat.yMMMd().format(record.dueDate!)}'),
+              ],
+              if (record.followUpDate != null) ...[
+                const SizedBox(height: 14),
+                Text(
+                  'Follow-up ${DateFormat.yMMMd().format(record.followUpDate!)}',
+                ),
               ],
               if (record.reportPaths.isNotEmpty) ...[
                 const SizedBox(height: 14),
@@ -666,10 +678,32 @@ class _RecordCard extends StatelessWidget {
                 Text(
                   '${record.type.label} · ${DateFormat.yMMMd().format(record.date)}',
                 ),
+                if (record.type == HealthRecordType.medical &&
+                    record.diagnosis.isNotEmpty) ...[
+                  const SizedBox(height: 7),
+                  _ClinicalPreview(label: 'Diagnosis', value: record.diagnosis),
+                ],
+                if (record.type == HealthRecordType.medical &&
+                    record.treatment.isNotEmpty)
+                  _ClinicalPreview(label: 'Treatment', value: record.treatment),
+                if (record.type == HealthRecordType.medical &&
+                    record.prescription.isNotEmpty)
+                  _ClinicalPreview(
+                    label: 'Prescription',
+                    value: record.prescription,
+                  ),
                 if (record.dueDate != null)
                   Text(
                     'Due ${DateFormat.yMMMd().format(record.dueDate!)}',
                     style: const TextStyle(fontSize: 12),
+                  ),
+                if (record.followUpDate != null)
+                  Text(
+                    'Follow-up ${DateFormat.yMMMd().format(record.followUpDate!)}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
               ],
             ),
@@ -699,6 +733,80 @@ class _RecordCard extends StatelessWidget {
     HealthRecordType.allergy => Icons.coronavirus_outlined,
     HealthRecordType.medical => Icons.medical_information_outlined,
   };
+}
+
+class _ClinicalPreview extends StatelessWidget {
+  const _ClinicalPreview({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 3),
+    child: Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: '$label: ',
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+          TextSpan(text: value),
+        ],
+      ),
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(fontSize: 12),
+    ),
+  );
+}
+
+class _EmptyRecords extends StatelessWidget {
+  const _EmptyRecords({required this.clinical});
+
+  final bool clinical;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(30),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(22),
+        decoration: BoxDecoration(
+          color: clinical ? AppColors.mint : AppColors.surface,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              clinical
+                  ? Icons.medical_information_outlined
+                  : Icons.folder_open_outlined,
+              size: 38,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              clinical
+                  ? 'No clinical medical records yet.'
+                  : 'No health records found.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              clinical
+                  ? 'Tap Clinical Record to add diagnosis, treatment, prescription, and a follow-up date.'
+                  : 'Try another record filter.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.muted),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _DateTile extends StatelessWidget {
