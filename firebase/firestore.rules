@@ -167,7 +167,10 @@ service cloud.firestore {
 
     match /petAccess/{petId}/veterinarians/{vetId} {
       allow read: if isActive() && (
-        vetId == request.auth.uid || isPetOwner(petId)
+        (
+          resource.data.veterinarianId == request.auth.uid
+          && resource.data.active == true
+        ) || isPetOwner(petId)
       );
       allow create: if hasRole('petOwner')
         && isPetOwner(petId)
@@ -199,6 +202,15 @@ service cloud.firestore {
           == vetId
         && changedOnly(['appointmentId', 'active', 'updatedAt']);
       allow delete: if false;
+    }
+
+    // Firestore collection-group queries need an explicit recursive match.
+    // The client constrains both fields, so a vet can list only active grants
+    // issued to their own immutable user id.
+    match /{path=**}/veterinarians/{vetId} {
+      allow list: if isActive()
+        && resource.data.veterinarianId == request.auth.uid
+        && resource.data.active == true;
     }
 
     match /petHealthRecords/{recordId} {

@@ -1,5 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const assert = require('node:assert/strict');
 const { after, before, beforeEach, describe, it } = require('node:test');
 const {
   assertFails,
@@ -245,6 +246,23 @@ describe('PawfectCare Firestore authorization', () => {
     );
     await assertFails(
       authenticated('vet-b').doc('petHealthRecords/record-1').get(),
+    );
+  });
+
+  it('allows a veterinarian to query only their active pet assignments', async () => {
+    const db = authenticated('vet-a');
+    const assignments = await assertSucceeds(
+      db
+        .collectionGroup('veterinarians')
+        .where('veterinarianId', '==', 'vet-a')
+        .where('active', '==', true)
+        .get(),
+    );
+    assert.equal(assignments.size, 1);
+    assert.equal(assignments.docs[0].data().petId, 'luna');
+
+    await assertFails(
+      authenticated('vet-a').collectionGroup('veterinarians').get(),
     );
   });
 
