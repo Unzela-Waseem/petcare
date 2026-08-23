@@ -14,6 +14,17 @@ abstract final class AppEnvironment {
     defaultValue: false,
   );
 
+  static const cloudinaryCloudName = String.fromEnvironment(
+    'CLOUDINARY_CLOUD_NAME',
+  );
+
+  static const cloudinaryUploadPreset = String.fromEnvironment(
+    'CLOUDINARY_UPLOAD_PRESET',
+  );
+
+  static bool get usesCloudinary =>
+      cloudinaryCloudName.isNotEmpty && cloudinaryUploadPreset.isNotEmpty;
+
   static const appName = 'PawfectCare';
   static const fcmWebVapidKey = String.fromEnvironment('FCM_WEB_VAPID_KEY');
   static bool get isDemo => !usesFirebase;

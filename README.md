@@ -21,7 +21,7 @@ The UI follows a warm editorial pet-care system: cream canvases, peach feature p
 - Profile editing/photo, recent-login password changes, notification preferences, feedback, and Google Maps links
 - Firebase Authentication and private profile adapter
 - Firebase Cloud Messaging permission, token rotation, per-device storage, and logout cleanup
-- No-card fallback: private photos/reports persist on the current device and appointment/vaccine/follow-up reminders use local notifications
+- No-card fallback: ordinary images sync through a restricted Cloudinary unsigned preset, private medical reports remain on-device, and appointment/vaccine/follow-up reminders use local notifications
 - Strict Firestore and Storage rules with deny-by-default behavior
 - Trusted Cloud Functions for appointment, vaccine, adoption, and blog notifications
 - Firestore composite indexes and seeded production store/care-tip content
@@ -55,7 +55,18 @@ The repository is connected to Firebase project `pawfectcare-unzela-2026`:
 
 Cloud Storage and Cloud Functions require the Blaze plan for this project. The complete Storage rules and notification Functions are checked in and pass local emulator/lint/security verification, but Firebase rejected their live deployment while this project remains on Spark.
 
-The Firebase-connected app therefore defaults to a no-card fallback. Photos and medical files are written to private application storage on the current phone, and appointment, vaccination, deworming, and clinical follow-up reminders are scheduled on that device. Firestore records continue to sync, but local files do not sync to another device and server-originated adoption/blog notifications still require Functions.
+The Firebase-connected app supports a no-card hybrid fallback. Pet, profile, adoption-listing, and success-story images can sync through Cloudinary, while confidential medical reports remain in private application storage on Android/iOS. Appointment, vaccination, deworming, and clinical follow-up reminders are scheduled on-device. Firestore records continue to sync, but medical files do not sync to another device and server-originated adoption/blog notifications still require Functions.
+
+Run the connected web app with the restricted unsigned Cloudinary preset:
+
+```bash
+flutter run -d chrome \
+  --dart-define=USE_FIREBASE=true \
+  --dart-define=CLOUDINARY_CLOUD_NAME=dc1w5stzg \
+  --dart-define=CLOUDINARY_UPLOAD_PRESET=YOUR_EXACT_UNSIGNED_PRESET_NAME
+```
+
+The preset must allow only JPG/JPEG/PNG/WebP images up to 5 MB, disallow caller-provided public IDs, generate unique IDs, and disable overwrite. An unsigned client cannot securely delete an older remote asset after its short-lived deletion window; deleting or replacing an image removes the Firestore reference immediately, while periodic asset cleanup is performed from Cloudinary Media Library until a trusted signed backend is available. API secrets must never be added to this repository or any Flutter build.
 
 After linking a billing account, provision the default Storage bucket and deploy both:
 
@@ -74,7 +85,7 @@ flutter run \
 
 Configure APNs separately before testing push notifications on iOS. For Web Push, pass the Firebase Web Push certificate's public VAPID key as a build-time value.
 
-Run the app against Firebase:
+Run the app against Firebase with device-only media:
 
 ```bash
 flutter run --dart-define=USE_FIREBASE=true

@@ -9,6 +9,7 @@ import '../../../core/widgets/adaptive_image.dart';
 import '../../../core/widgets/paw_button.dart';
 import '../../../domain/models/app_user.dart';
 import '../../../domain/repositories/care_repository.dart';
+import '../../../domain/repositories/media_storage_service.dart';
 import '../../controllers/auth_controller.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -35,21 +36,23 @@ class ProfileScreen extends StatelessWidget {
             style: Theme.of(context).textTheme.headlineLarge,
           ),
           const SizedBox(height: 22),
-          if (services.media.isDeviceOnly) ...[
+          if (AppEnvironment.usesCloudinary || services.media.isDeviceOnly) ...[
             Container(
               padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(
                 color: AppColors.mint,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Row(
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.phone_android_rounded),
-                  SizedBox(width: 10),
+                  const Icon(Icons.cloud_done_outlined),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Free device storage is active. New photos and medical files stay on this phone and are not synced to other devices.',
+                      AppEnvironment.usesCloudinary
+                          ? 'Cloud image sync is active for profile, pet, and adoption photos. Private medical files stay only on the Android or iOS device.'
+                          : 'Free device storage is active. New photos and medical files stay on this phone and are not synced to other devices.',
                     ),
                   ),
                 ],
@@ -282,6 +285,8 @@ class _ProfileFormState extends State<_ProfileForm> {
         photoUrl: url,
       );
       if (mounted) Navigator.pop(context);
+    } on MediaFailure catch (error) {
+      if (mounted) _show(error.message);
     } on Object catch (error) {
       if (mounted) {
         _show(

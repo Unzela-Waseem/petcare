@@ -5,12 +5,14 @@ import 'package:flutter/material.dart';
 import 'app/pawfect_care_app.dart';
 import 'core/config/app_environment.dart';
 import 'core/config/app_services.dart';
+import 'data/services/cloudinary_media_storage_service.dart';
 import 'data/repositories/demo_auth_repository.dart';
 import 'data/repositories/demo_care_repository.dart';
 import 'data/repositories/firebase_auth_repository.dart';
 import 'data/repositories/firebase_care_repository.dart';
 import 'data/services/firebase_media_storage_service.dart';
 import 'data/services/firebase_push_notification_service.dart';
+import 'data/services/hybrid_media_storage_service.dart';
 import 'data/services/local_media_storage_service.dart';
 import 'data/services/local_reminder_service.dart';
 import 'data/services/session_store.dart';
@@ -43,11 +45,20 @@ Future<void> main() async {
         ? const NoopReminderService()
         : LocalReminderService();
     await reminders.initialize();
+    final localMedia = LocalMediaStorageService();
     services = AppServices(
       care: FirebaseCareRepository(),
       media: AppEnvironment.usesFirebaseStorage
           ? FirebaseMediaStorageService()
-          : LocalMediaStorageService(),
+          : AppEnvironment.usesCloudinary
+          ? HybridMediaStorageService(
+              cloudImages: CloudinaryMediaStorageService(
+                cloudName: AppEnvironment.cloudinaryCloudName,
+                uploadPreset: AppEnvironment.cloudinaryUploadPreset,
+              ),
+              privateFiles: localMedia,
+            )
+          : localMedia,
       offlineArticles: SharedPreferencesOfflineArticleService(),
       reminders: reminders,
     );

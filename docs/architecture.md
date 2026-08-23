@@ -11,7 +11,8 @@ presentation  ->  application/controllers  ->  domain/repositories
                                                    |
                                                    v
 data/repositories  ->  Firebase services  ->  Auth / Firestore / optional Storage / FCM
-                  ->  local services     ->  private device files / reminders
+                  ->  Cloudinary         ->  ordinary cross-device images
+                  ->  local services     ->  private medical files / reminders
 ```
 
 - **Presentation** renders immutable view state and sends user intent to controllers. Widgets never call Firebase directly.
@@ -19,7 +20,7 @@ data/repositories  ->  Firebase services  ->  Auth / Firestore / optional Storag
 - **Domain** contains roles, entities, repository contracts, and authorization-neutral business rules.
 - **Data** maps domain contracts to Firebase or deterministic demo implementations.
 - **Firebase services and rules** form the security boundary. UI visibility is convenience only; all authorization is repeated server-side by Security Rules or trusted server code.
-- **Demo mode** contains non-sensitive seed data so the UI can run without project credentials. Firebase mode is enabled with `--dart-define=USE_FIREBASE=true`; it defaults to Firestore/Auth plus private device media and local reminders. `USE_FIREBASE_STORAGE` and `USE_FIREBASE_PUSH` explicitly opt into the Blaze-backed paths later.
+- **Demo mode** contains non-sensitive seed data so the UI can run without project credentials. Firebase mode is enabled with `--dart-define=USE_FIREBASE=true`; Cloudinary is enabled only when both `CLOUDINARY_CLOUD_NAME` and `CLOUDINARY_UPLOAD_PRESET` are supplied. Without those values, media remains device-local. `USE_FIREBASE_STORAGE` and `USE_FIREBASE_PUSH` explicitly opt into the Blaze-backed paths later and Firebase Storage takes precedence over Cloudinary.
 
 ### Folder structure
 
@@ -108,7 +109,9 @@ Server timestamps are used for every `createdAt` and `updatedAt`. IDs shown belo
 | `notifications/{uid}/items/{notificationId}` | `type`, `title`, `body`, `resourceId`, `readAt`, `createdAt` | Functions create; recipient reads and marks read. |
 | `feedback/{feedbackId}` | `userId`, `type`, `message`, `createdAt` | User creates and reads own; no cross-user access. |
 
-Cloud Storage paths are document-linked, never public URLs: `users/{uid}/avatar/*`, `pets/{petId}/images/*`, `shelters/{shelterId}/images/*`, and `medical/{petId}/{recordId}/*`. In the no-card configuration, the same logical paths map to the app's private documents directory and the UI resolves `file:` media only on that device.
+Cloud Storage paths are document-linked, never public URLs: `users/{uid}/avatar/*`, `pets/{petId}/images/*`, `shelters/{shelterId}/images/*`, and `medical/{petId}/{recordId}/*`. In the no-card hybrid configuration, ordinary image paths upload to the restricted Cloudinary preset and store an HTTPS delivery URL plus a prefixed asset reference. `medical/*` is never routed to Cloudinary: it maps to the app's private documents directory on Android/iOS and is intentionally unavailable from web. The UI resolves those `file:` records only on their originating device.
+
+Cloudinary is a delivery fallback rather than an authorization boundary. The preset restricts format, size, generated IDs, and overwrite behavior, but the preset name is inherently visible in a client application. No API secret is embedded. Remote destruction requires a trusted signed backend; app deletion removes the Firestore reference, and orphaned public assets are cleaned from the Cloudinary Media Library. Confidential medical records remain outside this public-image path.
 
 ## 4. Authorization matrix
 
