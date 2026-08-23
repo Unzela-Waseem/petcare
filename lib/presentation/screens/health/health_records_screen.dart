@@ -144,8 +144,14 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> {
                     }
                     final query = _query.trim().toLowerCase();
                     final records = snapshot.data!.where((record) {
+                      final clinical =
+                          record.type == HealthRecordType.medical ||
+                          record.veterinarianId != null;
                       final matchesType =
-                          _filter == null || record.type == _filter;
+                          _filter == null ||
+                          (_filter == HealthRecordType.medical
+                              ? clinical
+                              : record.type == _filter);
                       final searchable = [
                         record.title,
                         record.type.label,
@@ -436,14 +442,21 @@ class _HealthRecordFormScreenState extends State<HealthRecordFormScreen> {
             const SizedBox(height: 14),
             DropdownButtonFormField<HealthRecordType>(
               initialValue: _type,
-              decoration: const InputDecoration(labelText: 'Record type'),
-              items: (_isVet ? HealthRecordType.values : ownerTypes)
+              decoration: InputDecoration(
+                labelText: 'Record type',
+                helperText: _isVet
+                    ? 'Veterinarian entries are protected medical records.'
+                    : null,
+              ),
+              items: (_isVet ? const [HealthRecordType.medical] : ownerTypes)
                   .map(
                     (type) =>
                         DropdownMenuItem(value: type, child: Text(type.label)),
                   )
                   .toList(),
-              onChanged: (value) => setState(() => _type = value ?? _type),
+              onChanged: _isVet
+                  ? null
+                  : (value) => setState(() => _type = value ?? _type),
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -649,6 +662,9 @@ class _RecordCard extends StatelessWidget {
   final VoidCallback onDelete;
   final bool canDelete;
 
+  bool get _clinical =>
+      record.type == HealthRecordType.medical || record.veterinarianId != null;
+
   @override
   Widget build(BuildContext context) => InkWell(
     onTap: onTap,
@@ -656,14 +672,18 @@ class _RecordCard extends StatelessWidget {
     child: Ink(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _color(record.type),
+        color: _clinical ? AppColors.mint : _color(record.type),
         borderRadius: BorderRadius.circular(22),
       ),
       child: Row(
         children: [
           CircleAvatar(
             backgroundColor: AppColors.surface,
-            child: Icon(_icon(record.type)),
+            child: Icon(
+              _clinical
+                  ? Icons.medical_information_outlined
+                  : _icon(record.type),
+            ),
           ),
           const SizedBox(width: 13),
           Expanded(
@@ -676,18 +696,15 @@ class _RecordCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '${record.type.label} · ${DateFormat.yMMMd().format(record.date)}',
+                  '${_clinical ? 'Medical${record.type == HealthRecordType.medical ? '' : ' · ${record.type.label}'}' : record.type.label} · ${DateFormat.yMMMd().format(record.date)}',
                 ),
-                if (record.type == HealthRecordType.medical &&
-                    record.diagnosis.isNotEmpty) ...[
+                if (_clinical && record.diagnosis.isNotEmpty) ...[
                   const SizedBox(height: 7),
                   _ClinicalPreview(label: 'Diagnosis', value: record.diagnosis),
                 ],
-                if (record.type == HealthRecordType.medical &&
-                    record.treatment.isNotEmpty)
+                if (_clinical && record.treatment.isNotEmpty)
                   _ClinicalPreview(label: 'Treatment', value: record.treatment),
-                if (record.type == HealthRecordType.medical &&
-                    record.prescription.isNotEmpty)
+                if (_clinical && record.prescription.isNotEmpty)
                   _ClinicalPreview(
                     label: 'Prescription',
                     value: record.prescription,
