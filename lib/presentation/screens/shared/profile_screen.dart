@@ -188,6 +188,7 @@ class _ProfileFormState extends State<_ProfileForm> {
   late final TextEditingController _name;
   late final TextEditingController _phone;
   PickedMedia? _image;
+  String? _errorText;
   bool _busy = false;
 
   @override
@@ -237,6 +238,14 @@ class _ProfileFormState extends State<_ProfileForm> {
             keyboardType: TextInputType.phone,
             decoration: const InputDecoration(labelText: 'Phone number'),
           ),
+          if (_errorText != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              _errorText!,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ],
           const SizedBox(height: 18),
           PawButton(label: 'Save Profile', busy: _busy, onPressed: _save),
         ],
@@ -255,10 +264,13 @@ class _ProfileFormState extends State<_ProfileForm> {
 
   Future<void> _save() async {
     if (_name.text.trim().length < 2 || _phone.text.trim().length < 7) {
-      _show('Enter a valid name and phone number.');
+      setState(() => _errorText = 'Enter a valid name and phone number.');
       return;
     }
-    setState(() => _busy = true);
+    setState(() {
+      _errorText = null;
+      _busy = true;
+    });
     try {
       String? path;
       var url = widget.user.photoUrl;
@@ -286,11 +298,11 @@ class _ProfileFormState extends State<_ProfileForm> {
       );
       if (mounted) Navigator.pop(context);
     } on MediaFailure catch (error) {
-      if (mounted) _show(error.message);
+      if (mounted) setState(() => _errorText = error.message);
     } on Object catch (error) {
       if (mounted) {
-        _show(
-          error is CareFailure
+        setState(
+          () => _errorText = error is CareFailure
               ? error.message
               : 'Profile could not be updated.',
         );

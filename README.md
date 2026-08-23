@@ -50,6 +50,7 @@ The repository is connected to Firebase project `pawfectcare-unzela-2026`:
 - The default Standard Firestore database is in `asia-south1` (Mumbai) with deletion protection enabled.
 - Firestore rules and composite indexes are deployed.
 - Four store products and four published care guides are live in Firestore.
+- The restricted `pawfactcare_unsigned` Cloudinary preset is configured and has passed an end-to-end web profile-image upload.
 - Cloud Messaging, Firebase Installations, and Cloud Storage APIs are enabled.
 - The generated Firebase client configuration is checked in. These client identifiers are not server credentials; authorization remains enforced by Firebase Authentication and the checked-in rules.
 
@@ -63,7 +64,7 @@ Run the connected web app with the restricted unsigned Cloudinary preset:
 flutter run -d chrome \
   --dart-define=USE_FIREBASE=true \
   --dart-define=CLOUDINARY_CLOUD_NAME=dc1w5stzg \
-  --dart-define=CLOUDINARY_UPLOAD_PRESET=YOUR_EXACT_UNSIGNED_PRESET_NAME
+  --dart-define=CLOUDINARY_UPLOAD_PRESET=pawfactcare_unsigned
 ```
 
 The preset must allow only JPG/JPEG/PNG/WebP images up to 5 MB, disallow caller-provided public IDs, generate unique IDs, and disable overwrite. An unsigned client cannot securely delete an older remote asset after its short-lived deletion window; deleting or replacing an image removes the Firestore reference immediately, while periodic asset cleanup is performed from Cloudinary Media Library until a trusted signed backend is available. API secrets must never be added to this repository or any Flutter build.

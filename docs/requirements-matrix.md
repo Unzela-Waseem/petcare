@@ -29,6 +29,7 @@ This matrix maps the supplied specification to the implemented production path. 
 - Functions: syntax check and ESLint pass; production dependency audit reports zero vulnerabilities; all trigger definitions load in the emulator.
 - Firestore rules and indexes are deployed to `pawfectcare-unzela-2026`.
 - Live Firestore contains four products and four care guides.
+- The restricted Cloudinary preset passed a real web upload, Firestore profile update, and HTTPS image-render test.
 - Local media persistence and deterministic reminder-ID tests pass.
 
 ## Account-owner release actions
