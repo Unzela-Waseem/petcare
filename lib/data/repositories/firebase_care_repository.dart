@@ -217,7 +217,7 @@ class FirebaseCareRepository implements CareRepository {
       throw const CareFailure('Only the pet owner can book this visit.');
     }
     final slotRef = _db.collection('vetAvailability').doc(slot.id);
-    final appointmentRef = _db.collection('appointments').doc(slot.id);
+    final appointmentRef = _db.collection('appointments').doc();
     final accessRef = _db
         .collection('petAccess')
         .doc(pet.id)
@@ -286,7 +286,7 @@ class FirebaseCareRepository implements CareRepository {
     final oldSlotRef = _db
         .collection('vetAvailability')
         .doc(appointment.slotId);
-    final newAppointmentRef = _db.collection('appointments').doc(newSlot.id);
+    final newAppointmentRef = _db.collection('appointments').doc();
     final accessRef = _db
         .collection('petAccess')
         .doc(appointment.petId)

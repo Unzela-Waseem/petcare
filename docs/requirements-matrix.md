@@ -25,7 +25,7 @@ This matrix maps the supplied specification to the implemented production path. 
 
 - `flutter analyze`: no issues.
 - `flutter test`: all unit/widget tests pass.
-- Firebase Emulator Suite: 19 Firestore/Storage authorization tests pass.
+- Firebase Emulator Suite: 20 Firestore/Storage authorization tests pass, including cancelled-slot rebooking without history overwrite.
 - Functions: syntax check and ESLint pass; production dependency audit reports zero vulnerabilities; all trigger definitions load in the emulator.
 - Firestore rules and indexes are deployed to `pawfectcare-unzela-2026`.
 - Live Firestore contains four products and four care guides.

@@ -279,11 +279,18 @@ service cloud.firestore {
           && request.resource.data.veterinarianId == resource.data.veterinarianId
           && request.resource.data.start == resource.data.start
           && request.resource.data.end == resource.data.end
-          && request.resource.data.appointmentId == slotId
-          && existsAfter(appointmentPath(slotId))
-          && getAfter(appointmentPath(slotId)).data.ownerId
+          && request.resource.data.appointmentId is string
+          && existsAfter(appointmentPath(request.resource.data.appointmentId))
+          && getAfter(appointmentPath(
+            request.resource.data.appointmentId
+          )).data.slotId == slotId
+          && getAfter(appointmentPath(
+            request.resource.data.appointmentId
+          )).data.ownerId
             == request.resource.data.bookingOwnerId
-          && getAfter(appointmentPath(slotId)).data.veterinarianId
+          && getAfter(appointmentPath(
+            request.resource.data.appointmentId
+          )).data.veterinarianId
             == resource.data.veterinarianId
           && changedOnly([
             'isBooked', 'bookingOwnerId', 'appointmentId', 'updatedAt'
@@ -296,18 +303,28 @@ service cloud.firestore {
             || (
               hasRole('veterinarian')
               && resource.data.veterinarianId == request.auth.uid
-              && getAfter(appointmentPath(slotId)).data.rescheduledFrom is string
+              && getAfter(appointmentPath(
+                request.resource.data.appointmentId
+              )).data.rescheduledFrom is string
               && exists(appointmentPath(
-                getAfter(appointmentPath(slotId)).data.rescheduledFrom
+                getAfter(appointmentPath(
+                  request.resource.data.appointmentId
+                )).data.rescheduledFrom
               ))
               && get(appointmentPath(
-                getAfter(appointmentPath(slotId)).data.rescheduledFrom
+                getAfter(appointmentPath(
+                  request.resource.data.appointmentId
+                )).data.rescheduledFrom
               )).data.veterinarianId == request.auth.uid
               && get(appointmentPath(
-                getAfter(appointmentPath(slotId)).data.rescheduledFrom
+                getAfter(appointmentPath(
+                  request.resource.data.appointmentId
+                )).data.rescheduledFrom
               )).data.ownerId == request.resource.data.bookingOwnerId
               && getAfter(appointmentPath(
-                getAfter(appointmentPath(slotId)).data.rescheduledFrom
+                getAfter(appointmentPath(
+                  request.resource.data.appointmentId
+                )).data.rescheduledFrom
               )).data.status == 'cancelled'
             )
           )
@@ -354,7 +371,7 @@ service cloud.firestore {
     }
 
     match /appointments/{appointmentId} {
-      allow create: if appointmentId == request.resource.data.slotId
+      allow create: if request.resource.data.slotId is string
         && request.resource.data.status == 'pending'
         && (
           (

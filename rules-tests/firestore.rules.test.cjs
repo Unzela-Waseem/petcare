@@ -131,6 +131,21 @@ async function seedData() {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+    await db.doc('vetAvailability/slot-reopened').set({
+      veterinarianId: 'vet-a',
+      start: new Date('2030-01-12T10:00:00.000Z'),
+      end: new Date('2030-01-12T10:30:00.000Z'),
+      isBooked: false,
+      bookingOwnerId: null,
+      appointmentId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    await db.doc('appointments/appointment-cancelled').set({
+      ...appointmentData({ slotId: 'slot-reopened' }),
+      dateTime: new Date('2030-01-12T10:00:00.000Z'),
+      status: 'cancelled',
+    });
     await db.doc('vetAvailability/slot-old').set({
       veterinarianId: 'vet-a',
       start: new Date('2030-01-09T10:00:00.000Z'),
@@ -333,15 +348,15 @@ describe('PawfectCare Firestore authorization', () => {
     batch.update(db.doc('vetAvailability/slot-open'), {
       isBooked: true,
       bookingOwnerId: 'owner-a',
-      appointmentId: 'slot-open',
+      appointmentId: 'appointment-new',
       updatedAt: new Date(),
     });
     batch.set(
-      db.doc('appointments/slot-open'),
+      db.doc('appointments/appointment-new'),
       appointmentData({ slotId: 'slot-open' }),
     );
     batch.update(db.doc('petAccess/luna/veterinarians/vet-a'), {
-      appointmentId: 'slot-open',
+      appointmentId: 'appointment-new',
       active: true,
       updatedAt: new Date(),
     });
@@ -356,6 +371,33 @@ describe('PawfectCare Firestore authorization', () => {
       updatedAt: new Date(),
     });
     await assertFails(second.commit());
+  });
+
+  it('rebooks a reopened slot without overwriting cancelled history', async () => {
+    const db = authenticated('owner-a');
+    const batch = db.batch();
+    batch.update(db.doc('vetAvailability/slot-reopened'), {
+      isBooked: true,
+      bookingOwnerId: 'owner-a',
+      appointmentId: 'appointment-rebooked',
+      updatedAt: new Date(),
+    });
+    batch.set(
+      db.doc('appointments/appointment-rebooked'),
+      {
+        ...appointmentData({ slotId: 'slot-reopened' }),
+        dateTime: new Date('2030-01-12T10:00:00.000Z'),
+      },
+    );
+    batch.update(db.doc('petAccess/luna/veterinarians/vet-a'), {
+      appointmentId: 'appointment-rebooked',
+      active: true,
+      updatedAt: new Date(),
+    });
+    await assertSucceeds(batch.commit());
+    await assertSucceeds(
+      db.doc('appointments/appointment-cancelled').get(),
+    );
   });
 
   it('blocks direct appointment and arbitrary veterinarian grant writes', async () => {
@@ -392,11 +434,11 @@ describe('PawfectCare Firestore authorization', () => {
     batch.update(db.doc('vetAvailability/slot-reschedule'), {
       isBooked: true,
       bookingOwnerId: 'owner-a',
-      appointmentId: 'slot-reschedule',
+      appointmentId: 'appointment-rescheduled',
       updatedAt: new Date(),
     });
     batch.set(
-      db.doc('appointments/slot-reschedule'),
+      db.doc('appointments/appointment-rescheduled'),
       {
         ...appointmentData({
           slotId: 'slot-reschedule',

@@ -25,7 +25,7 @@ The UI follows a warm editorial pet-care system: cream canvases, peach feature p
 - Strict Firestore and Storage rules with deny-by-default behavior
 - Trusted Cloud Functions for appointment, vaccine, adoption, and blog notifications
 - Firestore composite indexes and seeded production store/care-tip content
-- Flutter unit/widget tests and 19 Firestore/Storage Emulator authorization tests
+- Flutter unit/widget tests and 20 Firestore/Storage Emulator authorization tests
 - A deterministic demo mode that never touches production data
 
 The complete architecture and security contract live in [`docs/architecture.md`](docs/architecture.md). The specification-by-specification completion evidence and remaining account-owner release actions are in [`docs/requirements-matrix.md`](docs/requirements-matrix.md).
@@ -105,6 +105,8 @@ flutter run -d chrome \
 Demo builds continue to work without Firebase configuration.
 
 Catalog/blog publishing, role/account administration, and notification fan-out remain trusted-backend-only. Appointment booking and veterinarian grants are committed atomically and verified with `getAfter()` rules, so a client cannot grant access without a valid appointment or book one slot twice.
+
+Appointment documents use unique immutable IDs rather than slot IDs. Cancelling releases the slot without overwriting its history, so the same open time can be booked again as a new pending appointment.
 
 ## Verification
 
