@@ -11,6 +11,9 @@ class FirebaseMediaStorageService implements MediaStorageService {
   final FirebaseStorage _storage;
 
   @override
+  bool get isDeviceOnly => false;
+
+  @override
   Future<StoredMedia> upload({
     required String path,
     required Uint8List bytes,
@@ -51,6 +54,9 @@ class FirebaseMediaStorageService implements MediaStorageService {
 
 class DemoMediaStorageService implements MediaStorageService {
   const DemoMediaStorageService();
+
+  @override
+  bool get isDeviceOnly => true;
 
   @override
   Future<StoredMedia> upload({

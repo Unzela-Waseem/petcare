@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/config/app_services.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/adaptive_image.dart';
 import '../../../core/widgets/paw_button.dart';
 import '../../../domain/models/app_user.dart';
 import '../../../domain/models/care_models.dart';
@@ -175,10 +176,10 @@ class PetDetailScreen extends StatelessWidget {
     if (pet.photoUrl != null && pet.photoUrl!.isNotEmpty) {
       return Container(
         color: AppColors.peach,
-        child: Image.network(
-          pet.photoUrl!,
+        child: AdaptiveImage(
+          source: pet.photoUrl!,
           fit: BoxFit.cover,
-          errorBuilder: (_, _, _) => _fallbackHero(),
+          fallback: _fallbackHero(),
         ),
       );
     }

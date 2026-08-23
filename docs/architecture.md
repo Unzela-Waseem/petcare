@@ -10,7 +10,8 @@ PawfectCare uses feature-first clean architecture with explicit trust boundaries
 presentation  ->  application/controllers  ->  domain/repositories
                                                    |
                                                    v
-data/repositories  ->  Firebase services  ->  Auth / Firestore / Storage / FCM
+data/repositories  ->  Firebase services  ->  Auth / Firestore / optional Storage / FCM
+                  ->  local services     ->  private device files / reminders
 ```
 
 - **Presentation** renders immutable view state and sends user intent to controllers. Widgets never call Firebase directly.
@@ -18,7 +19,7 @@ data/repositories  ->  Firebase services  ->  Auth / Firestore / Storage / FCM
 - **Domain** contains roles, entities, repository contracts, and authorization-neutral business rules.
 - **Data** maps domain contracts to Firebase or deterministic demo implementations.
 - **Firebase services and rules** form the security boundary. UI visibility is convenience only; all authorization is repeated server-side by Security Rules or trusted server code.
-- **Demo mode** contains non-sensitive seed data so the UI can run without project credentials. Production mode is enabled with `--dart-define=USE_FIREBASE=true` after native Firebase configuration files are installed.
+- **Demo mode** contains non-sensitive seed data so the UI can run without project credentials. Firebase mode is enabled with `--dart-define=USE_FIREBASE=true`; it defaults to Firestore/Auth plus private device media and local reminders. `USE_FIREBASE_STORAGE` and `USE_FIREBASE_PUSH` explicitly opt into the Blaze-backed paths later.
 
 ### Folder structure
 
@@ -107,7 +108,7 @@ Server timestamps are used for every `createdAt` and `updatedAt`. IDs shown belo
 | `notifications/{uid}/items/{notificationId}` | `type`, `title`, `body`, `resourceId`, `readAt`, `createdAt` | Functions create; recipient reads and marks read. |
 | `feedback/{feedbackId}` | `userId`, `type`, `message`, `createdAt` | User creates and reads own; no cross-user access. |
 
-Storage paths are document-linked, never public URLs: `users/{uid}/avatar/*`, `pets/{petId}/images/*`, `shelters/{shelterId}/images/*`, and `medical/{petId}/{recordId}/*`.
+Cloud Storage paths are document-linked, never public URLs: `users/{uid}/avatar/*`, `pets/{petId}/images/*`, `shelters/{shelterId}/images/*`, and `medical/{petId}/{recordId}/*`. In the no-card configuration, the same logical paths map to the app's private documents directory and the UI resolves `file:` media only on that device.
 
 ## 4. Authorization matrix
 
@@ -204,7 +205,7 @@ Every denied cell remains denied even if a client forges `uid`, `role`, `ownerId
 - Firestore and Storage emulator authorization tests pass.
 - Android, iOS, and Web FlutterFire configuration is installed; iOS push still requires the project owner's APNs credential.
 - Web push uses the registered messaging service worker and requires the project owner's public VAPID key at build time.
-- Storage/Functions deployment requires the project owner to enable Blaze; the source and local verification remain release-ready until then.
+- The Spark configuration uses private local files and scheduled device notifications. Storage/Functions deployment remains an optional Blaze release gate for cross-device files and server-originated push.
 - Crash/analytics payloads contain no diagnoses, prescriptions, phone numbers, or message bodies.
 - Accessibility checks cover text scaling, contrast, focus order, semantic labels, and 48 dp touch targets.
 - A privacy review confirms data retention/deletion and medical-document access policies.

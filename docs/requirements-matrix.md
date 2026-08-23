@@ -6,16 +6,16 @@ This matrix maps the supplied specification to the implemented production path. 
 |---|---|---|
 | Authentication | Register with exactly three roles, strong password/confirmation, email verification gate, login, reset, secure reauthentication password change, session restoration, and root-reset logout | Firebase Email/Password Auth enabled |
 | Authorization | Active verified accounts, immutable role/identity/ownership, role routing, deny-by-default rules, private queries scoped by stored party IDs | Firestore rules deployed |
-| Pet Owner: pets | Search by name/breed; create, edit, delete, view details; validated image selection/upload | CRUD live; image upload awaits Storage bucket |
-| Pet Owner: health | Pet selector, medical-requirement search, type filters, vaccination/deworming/allergy routine records, due dates, read-only clinical history | Firestore live; reminders implemented in Functions; documents await Storage bucket |
+| Pet Owner: pets | Search by name/breed; create, edit, delete, view details; validated image selection/upload | CRUD live; images persist on the current device without billing; cross-device images require Storage |
+| Pet Owner: health | Pet selector, medical-requirement search, type filters, vaccination/deworming/allergy routine records, due dates, read-only clinical history | Firestore live; due reminders run locally; documents persist on the current device |
 | Pet Owner: appointments | Search vets by name/clinic/specialty/location, choose pet and open time, reason, book, cancel, reschedule, statuses/history | Atomic Firestore workflow live |
 | Store | Food, Grooming, Toys, Health categories; image/name/description/price; search, filter, private wishlist, validated HTTPS purchase link | Four products seeded live |
 | Care tips | Training, Nutrition, First Aid, Pet Care; keyword search, category filter, private bookmarks, explicit offline save/remove and offline fallback | Four guides seeded live |
-| Adoption | Search/filter listings, submit private request, view owner history | Firestore live; listing images await Storage bucket |
-| Veterinarian | Assigned-pet search, protected patient history, diagnosis/treatment/prescription/follow-up, report selection, availability CRUD, appointment confirm/reschedule/complete/cancel | Firestore live; report upload awaits Storage bucket |
-| Shelter Admin | Create shelter profile; own listing CRUD/status; review/approve/reject requests; story draft/edit/publish/delete; manage volunteer/donation/inquiry statuses | Firestore live; images await Storage bucket |
-| Notifications | Per-device token rotation/cleanup, preferences, recipient-only inbox/read state, appointment/adoption/blog triggers, hourly appointment/vaccine reminders, web service worker, iOS background entitlement | Client ready; Functions deployment awaits Blaze; APNs/VAPID remain owner credentials |
-| Profile | View/edit allowed name/phone/photo, immutable role notice, password change, notification preferences, logout | Firestore/Auth live; photo awaits Storage bucket |
+| Adoption | Search/filter listings, submit private request, view owner history | Firestore live; listing images persist on the shelter admin's current device |
+| Veterinarian | Assigned-pet search, protected patient history, diagnosis/treatment/prescription/follow-up, report selection, availability CRUD, appointment confirm/reschedule/complete/cancel | Firestore live; reports persist on the current device and follow-ups schedule locally |
+| Shelter Admin | Create shelter profile; own listing CRUD/status; review/approve/reject requests; story draft/edit/publish/delete; manage volunteer/donation/inquiry statuses | Firestore live; images persist on the current device |
+| Notifications | Preferences, recipient-only inbox/read state, local appointment/vaccine/deworming/follow-up scheduling, plus optional FCM token rotation and trusted appointment/adoption/blog triggers | On-device reminders work without billing; server push awaits Blaze Functions; APNs/VAPID remain owner credentials |
+| Profile | View/edit allowed name/phone/photo, immutable role notice, password change, notification preferences, logout | Firestore/Auth live; photo persists on the current device |
 | Feedback/contact/maps | Suggestions, bugs, feedback; shelter inquiry; volunteer/donation forms; vet/shelter locations; Google Maps external deep links | Firestore and maps live |
 | Firestore security | Owner isolation, assigned-vet grants, clinical-field restrictions, shelter isolation, atomic slot booking/release/reschedule, server-only catalogs and notifications | Deployed and emulator-tested |
 | Storage security | 5 MB JPG/PNG/WebP images, 10 MB PDF/image medical files, owner/assigned-vet/shelter path authorization, deny-all fallback | Emulator-tested; deployment awaits Blaze bucket |
@@ -29,10 +29,11 @@ This matrix maps the supplied specification to the implemented production path. 
 - Functions: syntax check and ESLint pass; production dependency audit reports zero vulnerabilities; all trigger definitions load in the emulator.
 - Firestore rules and indexes are deployed to `pawfectcare-unzela-2026`.
 - Live Firestore contains four products and four care guides.
+- Local media persistence and deterministic reminder-ID tests pass.
 
 ## Account-owner release actions
 
-These cannot be completed by source code or Firebase CLI while the project is on Spark:
+The app is usable on Spark with device-only files and reminders. These optional production actions enable cross-device media and server push:
 
 1. Upgrade `pawfectcare-unzela-2026` to Blaze and create the default Storage bucket.
 2. Run `firebase deploy --only storage,functions`.

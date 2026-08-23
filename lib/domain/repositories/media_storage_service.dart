@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
 abstract interface class MediaStorageService {
+  bool get isDeviceOnly;
+
   Future<StoredMedia> upload({
     required String path,
     required Uint8List bytes,

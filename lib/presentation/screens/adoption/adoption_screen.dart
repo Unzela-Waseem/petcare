@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../core/config/app_services.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/media_picker.dart';
+import '../../../core/widgets/adaptive_image.dart';
 import '../../../core/widgets/paw_button.dart';
 import '../../../domain/models/app_user.dart';
 import '../../../domain/models/care_models.dart';
@@ -635,11 +636,12 @@ class _ListingCard extends StatelessWidget {
         if (listing.photoUrl != null && listing.photoUrl!.isNotEmpty)
           ClipRRect(
             borderRadius: BorderRadius.circular(18),
-            child: Image.network(
-              listing.photoUrl!,
+            child: AdaptiveImage(
+              source: listing.photoUrl!,
               width: double.infinity,
               height: 180,
               fit: BoxFit.cover,
+              fallback: const SizedBox.shrink(),
             ),
           ),
         if (listing.photoUrl != null && listing.photoUrl!.isNotEmpty)

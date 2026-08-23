@@ -21,6 +21,7 @@ The UI follows a warm editorial pet-care system: cream canvases, peach feature p
 - Profile editing/photo, recent-login password changes, notification preferences, feedback, and Google Maps links
 - Firebase Authentication and private profile adapter
 - Firebase Cloud Messaging permission, token rotation, per-device storage, and logout cleanup
+- No-card fallback: private photos/reports persist on the current device and appointment/vaccine/follow-up reminders use local notifications
 - Strict Firestore and Storage rules with deny-by-default behavior
 - Trusted Cloud Functions for appointment, vaccine, adoption, and blog notifications
 - Firestore composite indexes and seeded production store/care-tip content
@@ -52,10 +53,23 @@ The repository is connected to Firebase project `pawfectcare-unzela-2026`:
 - Cloud Messaging, Firebase Installations, and Cloud Storage APIs are enabled.
 - The generated Firebase client configuration is checked in. These client identifiers are not server credentials; authorization remains enforced by Firebase Authentication and the checked-in rules.
 
-Cloud Storage and Cloud Functions require the Blaze plan for projects created under the current Firebase policy. The complete Storage rules and notification Functions are checked in and pass local emulator/lint/security verification, but Firebase rejected their live deployment while this project remains on Spark. After linking a billing account, provision the default Storage bucket and deploy both:
+Cloud Storage and Cloud Functions require the Blaze plan for this project. The complete Storage rules and notification Functions are checked in and pass local emulator/lint/security verification, but Firebase rejected their live deployment while this project remains on Spark.
+
+The Firebase-connected app therefore defaults to a no-card fallback. Photos and medical files are written to private application storage on the current phone, and appointment, vaccination, deworming, and clinical follow-up reminders are scheduled on that device. Firestore records continue to sync, but local files do not sync to another device and server-originated adoption/blog notifications still require Functions.
+
+After linking a billing account, provision the default Storage bucket and deploy both:
 
 ```bash
 firebase deploy --only storage,functions
+```
+
+Then opt into the paid cloud paths explicitly:
+
+```bash
+flutter run \
+  --dart-define=USE_FIREBASE=true \
+  --dart-define=USE_FIREBASE_STORAGE=true \
+  --dart-define=USE_FIREBASE_PUSH=true
 ```
 
 Configure APNs separately before testing push notifications on iOS. For Web Push, pass the Firebase Web Push certificate's public VAPID key as a build-time value.
@@ -65,6 +79,8 @@ Run the app against Firebase:
 ```bash
 flutter run --dart-define=USE_FIREBASE=true
 ```
+
+That command uses Firebase Auth/Firestore with the free on-device media and reminder fallback; no billing account is required.
 
 For Web Push:
 

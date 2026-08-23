@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../core/config/app_services.dart';
 import '../../../core/config/auth_validators.dart';
+import '../../../core/config/app_environment.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/media_picker.dart';
+import '../../../core/widgets/adaptive_image.dart';
 import '../../../core/widgets/paw_button.dart';
 import '../../../domain/models/app_user.dart';
 import '../../../domain/repositories/care_repository.dart';
@@ -33,6 +35,28 @@ class ProfileScreen extends StatelessWidget {
             style: Theme.of(context).textTheme.headlineLarge,
           ),
           const SizedBox(height: 22),
+          if (services.media.isDeviceOnly) ...[
+            Container(
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                color: AppColors.mint,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.phone_android_rounded),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Free device storage is active. New photos and medical files stay on this phone and are not synced to other devices.',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -114,7 +138,9 @@ class ProfileScreen extends StatelessWidget {
           _SettingsTile(
             icon: Icons.notifications_none_rounded,
             title: 'Notification preferences',
-            subtitle: 'Appointments, vaccines, adoption, and care tips',
+            subtitle: AppEnvironment.usesFirebasePush
+                ? 'Appointments, vaccines, adoption, and care tips'
+                : 'On-device appointment and vaccine reminders',
             onTap: () => showModalBottomSheet<void>(
               context: context,
               isScrollControlled: true,
@@ -459,29 +485,36 @@ class _Avatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (user.photoUrl != null && user.photoUrl!.isNotEmpty) {
-      return CircleAvatar(
-        radius: 38,
-        backgroundImage: NetworkImage(user.photoUrl!),
+      return ClipOval(
+        child: AdaptiveImage(
+          source: user.photoUrl!,
+          width: 76,
+          height: 76,
+          fit: BoxFit.cover,
+          fallback: _initials(),
+        ),
       );
     }
-    return CircleAvatar(
-      radius: 38,
-      backgroundColor: AppColors.ink,
-      child: Text(
-        user.name
-            .split(' ')
-            .where((part) => part.isNotEmpty)
-            .map((part) => part.characters.first)
-            .take(2)
-            .join(),
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 20,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-    );
+    return _initials();
   }
+
+  Widget _initials() => CircleAvatar(
+    radius: 38,
+    backgroundColor: AppColors.ink,
+    child: Text(
+      user.name
+          .split(' ')
+          .where((part) => part.isNotEmpty)
+          .map((part) => part.characters.first)
+          .take(2)
+          .join(),
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 20,
+        fontWeight: FontWeight.w800,
+      ),
+    ),
+  );
 }
 
 class _SettingsTile extends StatelessWidget {

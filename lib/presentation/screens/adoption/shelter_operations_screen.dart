@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../core/config/app_services.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/media_picker.dart';
+import '../../../core/widgets/adaptive_image.dart';
 import '../../../core/widgets/paw_button.dart';
 import '../../../domain/models/app_user.dart';
 import '../../../domain/models/care_models.dart';
@@ -85,11 +86,12 @@ class SuccessStoriesScreen extends StatelessWidget {
                   if (story.photoUrl != null && story.photoUrl!.isNotEmpty)
                     ClipRRect(
                       borderRadius: BorderRadius.circular(18),
-                      child: Image.network(
-                        story.photoUrl!,
+                      child: AdaptiveImage(
+                        source: story.photoUrl!,
                         height: 170,
                         width: double.infinity,
                         fit: BoxFit.cover,
+                        fallback: const SizedBox.shrink(),
                       ),
                     ),
                   if (story.photoUrl != null && story.photoUrl!.isNotEmpty)

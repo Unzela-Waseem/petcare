@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
@@ -28,6 +30,23 @@ class RoleHomeShell extends StatefulWidget {
 
 class _RoleHomeShellState extends State<RoleHomeShell> {
   int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(
+      widget.services.reminders.start(
+        user: widget.user,
+        care: widget.services.care,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    unawaited(widget.services.reminders.stop());
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

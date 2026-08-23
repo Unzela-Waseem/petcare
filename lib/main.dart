@@ -11,10 +11,13 @@ import 'data/repositories/firebase_auth_repository.dart';
 import 'data/repositories/firebase_care_repository.dart';
 import 'data/services/firebase_media_storage_service.dart';
 import 'data/services/firebase_push_notification_service.dart';
+import 'data/services/local_media_storage_service.dart';
+import 'data/services/local_reminder_service.dart';
 import 'data/services/session_store.dart';
 import 'data/services/shared_preferences_offline_article_service.dart';
 import 'domain/repositories/auth_repository.dart';
 import 'domain/repositories/push_notification_service.dart';
+import 'domain/repositories/reminder_service.dart';
 import 'firebase_options.dart';
 import 'presentation/controllers/auth_controller.dart';
 
@@ -23,18 +26,30 @@ Future<void> main() async {
 
   late final AuthRepository authRepository;
   late final PushNotificationService pushNotifications;
+  late final ReminderService reminders;
   late final AppServices services;
   if (AppEnvironment.usesFirebase) {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    if (AppEnvironment.usesFirebasePush) {
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    }
     authRepository = FirebaseAuthRepository();
-    pushNotifications = FirebasePushNotificationService();
+    pushNotifications = AppEnvironment.usesFirebasePush
+        ? FirebasePushNotificationService()
+        : const NoopPushNotificationService();
+    reminders = AppEnvironment.usesFirebasePush
+        ? const NoopReminderService()
+        : LocalReminderService();
+    await reminders.initialize();
     services = AppServices(
       care: FirebaseCareRepository(),
-      media: FirebaseMediaStorageService(),
+      media: AppEnvironment.usesFirebaseStorage
+          ? FirebaseMediaStorageService()
+          : LocalMediaStorageService(),
       offlineArticles: SharedPreferencesOfflineArticleService(),
+      reminders: reminders,
     );
   } else {
     authRepository = DemoAuthRepository();
@@ -43,6 +58,7 @@ Future<void> main() async {
       care: DemoCareRepository(),
       media: const DemoMediaStorageService(),
       offlineArticles: SharedPreferencesOfflineArticleService(),
+      reminders: const NoopReminderService(),
     );
   }
 
