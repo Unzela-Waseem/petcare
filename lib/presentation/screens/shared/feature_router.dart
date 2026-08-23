@@ -7,6 +7,7 @@ import '../adoption/shelter_operations_screen.dart';
 import '../appointments/appointments_screen.dart';
 import '../content/catalog_screens.dart';
 import '../health/health_records_screen.dart';
+import '../health/patient_history_screen.dart';
 import '../pets/pets_screen.dart';
 import 'contact_feedback_screen.dart';
 import 'feature_catalog.dart';
@@ -23,8 +24,8 @@ abstract final class FeatureRouter {
       'My Pets' ||
       'Assigned Pets' => PetsScreen(user: user, services: services),
       'Health Records' ||
-      'Patient History' ||
       'Medical Records' => HealthRecordsScreen(user: user, services: services),
+      'Patient History' => PatientHistoryScreen(user: user, services: services),
       'Appointments' || "Today's Appointments" => AppointmentsScreen(
         user: user,
         services: services,
