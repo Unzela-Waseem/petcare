@@ -46,7 +46,13 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> {
         : widget.services.care.watchAssignedPets(widget.user.uid);
     return Scaffold(
       backgroundColor: AppColors.cream,
-      appBar: AppBar(title: const Text('Health Records')),
+      appBar: AppBar(
+        title: Text(
+          widget.user.role == UserRole.veterinarian
+              ? 'Medical Records'
+              : 'Health Records',
+        ),
+      ),
       body: StreamBuilder<List<Pet>>(
         stream: petStream,
         builder: (context, petSnapshot) {
@@ -175,25 +181,34 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> {
           );
         },
       ),
-      floatingActionButton: _selectedPet == null
-          ? null
-          : FloatingActionButton.extended(
-              onPressed: () => Navigator.of(context).push<void>(
-                MaterialPageRoute<void>(
-                  builder: (_) => HealthRecordFormScreen(
-                    user: widget.user,
-                    pet: _selectedPet!,
-                    services: widget.services,
-                  ),
-                ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          final pet = _selectedPet;
+          if (pet == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Wait for an authorized pet to load.'),
               ),
-              icon: const Icon(Icons.add_rounded),
-              label: Text(
-                widget.user.role == UserRole.veterinarian
-                    ? 'Clinical Record'
-                    : 'Care Record',
+            );
+            return;
+          }
+          Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(
+              builder: (_) => HealthRecordFormScreen(
+                user: widget.user,
+                pet: pet,
+                services: widget.services,
               ),
             ),
+          );
+        },
+        icon: const Icon(Icons.add_rounded),
+        label: Text(
+          widget.user.role == UserRole.veterinarian
+              ? 'Clinical Record'
+              : 'Care Record',
+        ),
+      ),
     );
   }
 
