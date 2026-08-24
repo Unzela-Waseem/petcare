@@ -67,6 +67,12 @@ abstract final class FeatureCatalog {
       canCreate: true,
     ),
     FeatureAction(
+      title: 'Adoption Requests',
+      subtitle: 'Track your applications',
+      icon: Icons.assignment_turned_in_outlined,
+      color: AppColors.peachLight,
+    ),
+    FeatureAction(
       title: 'Notifications',
       subtitle: 'Reminders & updates',
       icon: Icons.notifications_none_rounded,

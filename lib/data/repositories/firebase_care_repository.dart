@@ -535,6 +535,21 @@ class FirebaseCareRepository implements CareRepository {
     if (actorId == null) {
       throw const CareFailure('Sign in again to update this request.');
     }
+    final listingReference = _db
+        .collection('adoptionListings')
+        .doc(request.listingId);
+    final listingSnapshot = await listingReference.get();
+    final listingData = listingSnapshot.data();
+    final photoPath = listingData?['photoPath'];
+    final photoUrl = listingData?['photoUrl'];
+    if (photoPath is! String ||
+        photoPath.trim().isEmpty ||
+        photoUrl is! String ||
+        photoUrl.trim().isEmpty) {
+      throw const CareFailure(
+        'Add a pet photo to the listing before approving this adoption.',
+      );
+    }
     final relatedSnapshot = await requests
         .where('shelterAdminId', isEqualTo: actorId)
         .get();
@@ -555,7 +570,7 @@ class FirebaseCareRepository implements CareRepository {
         });
       }
     }
-    batch.update(_db.collection('adoptionListings').doc(request.listingId), {
+    batch.update(listingReference, {
       'status': AdoptionStatus.adopted.value,
       'updatedAt': FieldValue.serverTimestamp(),
     });

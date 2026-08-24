@@ -97,6 +97,15 @@ class _AdoptionListingsScreenState extends State<AdoptionListingsScreen> {
           ],
         ),
       ),
+      if (!_isAdmin)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 2),
+          child: OutlinedButton.icon(
+            onPressed: _openMyRequests,
+            icon: const Icon(Icons.assignment_turned_in_outlined),
+            label: const Text('My Adoption Requests'),
+          ),
+        ),
       Expanded(
         child: StreamBuilder<List<AdoptionListing>>(
           stream: widget.services.care.watchAdoptionListings(
@@ -196,7 +205,9 @@ class _AdoptionListingsScreenState extends State<AdoptionListingsScreen> {
         listing: listing,
         message: message.text,
       );
-      if (mounted) _show('Your private adoption request was submitted.');
+      if (mounted) {
+        _show('Request submitted. Track it under My Adoption Requests.');
+      }
     } on Object catch (error) {
       if (mounted) {
         _show(
@@ -221,6 +232,13 @@ class _AdoptionListingsScreenState extends State<AdoptionListingsScreen> {
           ),
         ),
       );
+
+  Future<void> _openMyRequests() => Navigator.of(context).push<void>(
+    MaterialPageRoute<void>(
+      builder: (_) =>
+          AdoptionRequestsScreen(user: widget.user, services: widget.services),
+    ),
+  );
 
   Future<void> _delete(AdoptionListing listing) async {
     final yes = await showDialog<bool>(
@@ -636,6 +654,15 @@ class AdoptionRequestsScreen extends StatelessWidget {
                           ),
                         ],
                       ),
+                    ] else if (admin &&
+                        request.status == RequestStatus.approved) ...[
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: () =>
+                            _update(context, request, RequestStatus.approved),
+                        icon: const Icon(Icons.pets_rounded),
+                        label: const Text('Mark Listing Adopted'),
+                      ),
                     ],
                   ],
                 ),
@@ -657,6 +684,18 @@ class AdoptionRequestsScreen extends StatelessWidget {
         request: request,
         status: status,
       );
+      if (context.mounted) {
+        final message = switch (status) {
+          RequestStatus.approved =>
+            '${request.petName} is approved and its listing is marked adopted.',
+          RequestStatus.rejected =>
+            '${request.petName} adoption request was rejected.',
+          RequestStatus.pending => 'Request status updated.',
+        };
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+      }
     } on Object catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
