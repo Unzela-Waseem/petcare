@@ -292,6 +292,7 @@ class _AdoptionListingFormScreenState extends State<AdoptionListingFormScreen> {
   late String _gender;
   late AdoptionStatus _status;
   PickedMedia? _image;
+  String? _imageError;
   bool _busy = false;
 
   @override
@@ -328,10 +329,52 @@ class _AdoptionListingFormScreenState extends State<AdoptionListingFormScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 10, 20, 28),
         children: [
+          if (_image != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: Image.memory(
+                _image!.bytes,
+                width: double.infinity,
+                height: 210,
+                fit: BoxFit.cover,
+              ),
+            )
+          else if (widget.listing?.photoUrl != null &&
+              widget.listing!.photoUrl!.isNotEmpty)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: AdaptiveImage(
+                source: widget.listing!.photoUrl!,
+                width: double.infinity,
+                height: 210,
+                fit: BoxFit.cover,
+                fallback: _PhotoPlaceholder(hasError: _imageError != null),
+              ),
+            )
+          else
+            _PhotoPlaceholder(hasError: _imageError != null),
+          const SizedBox(height: 10),
           OutlinedButton.icon(
             onPressed: _pickImage,
             icon: const Icon(Icons.add_photo_alternate_outlined),
-            label: Text(_image == null ? 'Choose pet photo' : _image!.name),
+            label: Text(
+              _image == null ? 'Choose pet photo (required)' : _image!.name,
+            ),
+          ),
+          if (_imageError != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              _imageError!,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontSize: 12,
+              ),
+            ),
+          ],
+          const SizedBox(height: 4),
+          Text(
+            'JPG, PNG, or WebP · maximum 5 MB',
+            style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 12),
           TextFormField(
@@ -400,7 +443,12 @@ class _AdoptionListingFormScreenState extends State<AdoptionListingFormScreen> {
   Future<void> _pickImage() async {
     try {
       final image = await MediaPicker.image();
-      if (image != null && mounted) setState(() => _image = image);
+      if (image != null && mounted) {
+        setState(() {
+          _image = image;
+          _imageError = null;
+        });
+      }
     } on FormatException catch (error) {
       if (mounted) _show(error.message);
     }
@@ -408,9 +456,34 @@ class _AdoptionListingFormScreenState extends State<AdoptionListingFormScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    final existingPhotoUrl = widget.listing?.photoUrl?.trim() ?? '';
+    if (_image == null && existingPhotoUrl.isEmpty) {
+      setState(() {
+        _imageError = 'Add a clear pet photo before saving this listing.';
+      });
+      return;
+    }
     setState(() => _busy = true);
     try {
-      var listing = AdoptionListing(
+      StoredMedia? uploadedMedia;
+      if (_image != null) {
+        try {
+          uploadedMedia = await widget.services.media.upload(
+            path:
+                'shelters/${widget.shelter.id}/images/${DateTime.now().millisecondsSinceEpoch}_${_image!.name}',
+            bytes: _image!.bytes,
+            contentType: _image!.contentType,
+          );
+        } on MediaFailure catch (error) {
+          if (mounted) {
+            setState(() => _imageError = error.message);
+            _show('${error.message} The listing was not saved.');
+          }
+          return;
+        }
+      }
+
+      final listing = AdoptionListing(
         id: widget.listing?.id ?? '',
         shelterId: widget.shelter.id,
         adminId: widget.user.uid,
@@ -421,44 +494,12 @@ class _AdoptionListingFormScreenState extends State<AdoptionListingFormScreen> {
         healthStatus: _health.text.trim(),
         status: _status,
         description: _description.text.trim(),
-        photoPath: widget.listing?.photoPath,
-        photoUrl: widget.listing?.photoUrl,
+        photoPath: uploadedMedia?.path ?? widget.listing?.photoPath,
+        photoUrl: uploadedMedia?.downloadUrl ?? widget.listing?.photoUrl,
       );
-      final id = await widget.services.care.saveAdoptionListing(listing);
-      if (_image != null) {
-        late final StoredMedia media;
-        try {
-          media = await widget.services.media.upload(
-            path:
-                'shelters/${widget.shelter.id}/images/${DateTime.now().millisecondsSinceEpoch}_${_image!.name}',
-            bytes: _image!.bytes,
-            contentType: _image!.contentType,
-          );
-        } on MediaFailure catch (error) {
-          if (mounted) {
-            _show('${error.message} The listing was saved without it.');
-            Navigator.pop(context);
-          }
-          return;
-        }
-        if (widget.listing?.photoPath != null) {
-          await widget.services.media.delete(widget.listing!.photoPath!);
-        }
-        listing = AdoptionListing(
-          id: id,
-          shelterId: listing.shelterId,
-          adminId: listing.adminId,
-          petName: listing.petName,
-          species: listing.species,
-          age: listing.age,
-          gender: listing.gender,
-          healthStatus: listing.healthStatus,
-          status: listing.status,
-          description: listing.description,
-          photoPath: media.path,
-          photoUrl: media.downloadUrl,
-        );
-        await widget.services.care.saveAdoptionListing(listing);
+      await widget.services.care.saveAdoptionListing(listing);
+      if (uploadedMedia != null && widget.listing?.photoPath != null) {
+        await widget.services.media.delete(widget.listing!.photoPath!);
       }
       if (mounted) Navigator.pop(context);
     } on Object catch (error) {
@@ -477,6 +518,36 @@ class _AdoptionListingFormScreenState extends State<AdoptionListingFormScreen> {
   void _show(String message) => ScaffoldMessenger.of(
     context,
   ).showSnackBar(SnackBar(content: Text(message)));
+}
+
+class _PhotoPlaceholder extends StatelessWidget {
+  const _PhotoPlaceholder({required this.hasError});
+
+  final bool hasError;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 210,
+    width: double.infinity,
+    decoration: BoxDecoration(
+      color: AppColors.peach.withValues(alpha: 0.45),
+      borderRadius: BorderRadius.circular(22),
+      border: Border.all(
+        color: hasError
+            ? Theme.of(context).colorScheme.error
+            : AppColors.border,
+        width: hasError ? 1.5 : 1,
+      ),
+    ),
+    child: const Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.pets_rounded, size: 52),
+        SizedBox(height: 10),
+        Text('A pet photo is required'),
+      ],
+    ),
+  );
 }
 
 class AdoptionRequestsScreen extends StatelessWidget {

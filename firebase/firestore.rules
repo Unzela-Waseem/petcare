@@ -476,14 +476,15 @@ service cloud.firestore {
     }
 
     match /adoptionListings/{listingId} {
-      allow read: if isActive() && (
-        resource.data.status in ['available', 'pending', 'adopted']
-        || ownsShelter(resource.data.shelterId)
-      );
+      allow read: if isActive();
       allow create: if hasRole('shelterAdmin')
         && request.resource.data.adminId == request.auth.uid
         && ownsShelter(request.resource.data.shelterId)
         && request.resource.data.status in ['available', 'pending', 'adopted']
+        && request.resource.data.photoPath is string
+        && request.resource.data.photoPath.size() > 0
+        && request.resource.data.photoUrl is string
+        && request.resource.data.photoUrl.size() > 0
         && request.resource.data.keys().hasOnly([
           'shelterId', 'adminId', 'petName', 'species', 'age', 'gender',
           'healthStatus', 'description', 'photoPath', 'photoUrl', 'status',
@@ -492,6 +493,10 @@ service cloud.firestore {
       allow update: if ownsShelter(resource.data.shelterId)
         && request.resource.data.shelterId == resource.data.shelterId
         && request.resource.data.adminId == resource.data.adminId
+        && request.resource.data.photoPath is string
+        && request.resource.data.photoPath.size() > 0
+        && request.resource.data.photoUrl is string
+        && request.resource.data.photoUrl.size() > 0
         && request.resource.data.status in ['available', 'pending', 'adopted'];
       allow delete: if ownsShelter(resource.data.shelterId);
     }

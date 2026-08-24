@@ -109,8 +109,17 @@ async function seedData() {
     await db.doc('adoptionListings/coco').set({
       shelterId: 'shelter-one',
       adminId: 'shelter-a',
-      name: 'Coco',
+      petName: 'Coco',
+      species: 'Cat',
+      age: 2,
+      gender: 'Female',
+      healthStatus: 'Vaccinated',
+      description: 'Friendly indoor cat',
+      photoPath: 'cloudinary:image:pawfectcare/coco',
+      photoUrl: 'https://res.cloudinary.com/demo/image/upload/coco.jpg',
       status: 'available',
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
     await db.doc('vetAvailability/slot-open').set({
       veterinarianId: 'vet-a',
@@ -289,6 +298,43 @@ describe('PawfectCare Firestore authorization', () => {
     await assertFails(
       authenticated('shelter-b').doc('adoptionListings/coco').update({
         status: 'adopted',
+      }),
+    );
+  });
+
+  it('lets active pet owners query adoption listings', async () => {
+    const listings = await assertSucceeds(
+      authenticated('owner-a').collection('adoptionListings').get(),
+    );
+    assert.equal(listings.size, 1);
+    assert.equal(listings.docs[0].data().petName, 'Coco');
+  });
+
+  it('requires shelter adoption listings to have a photo', async () => {
+    const listing = {
+      shelterId: 'shelter-one',
+      adminId: 'shelter-a',
+      petName: 'Milo',
+      species: 'Dog',
+      age: 3,
+      gender: 'Male',
+      healthStatus: 'Vaccinated',
+      description: 'Friendly family dog',
+      photoPath: 'cloudinary:image:pawfectcare/milo',
+      photoUrl: 'https://res.cloudinary.com/demo/image/upload/milo.jpg',
+      status: 'available',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    await assertSucceeds(
+      authenticated('shelter-a').doc('adoptionListings/milo').set(listing),
+    );
+    await assertFails(
+      authenticated('shelter-a').doc('adoptionListings/no-photo').set({
+        ...listing,
+        petName: 'No Photo',
+        photoPath: null,
+        photoUrl: null,
       }),
     );
   });
