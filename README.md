@@ -30,16 +30,46 @@ The UI follows a warm editorial pet-care system: cream canvases, peach feature p
 
 The complete architecture and security contract live in [`docs/architecture.md`](docs/architecture.md). The specification-by-specification completion evidence and remaining account-owner release actions are in [`docs/requirements-matrix.md`](docs/requirements-matrix.md).
 
-## Run the design demo
+## Run the app
 
-Demo mode is the default and requires no Firebase project:
+The checked-in app defaults to the connected Firebase project and the restricted
+Cloudinary image preset, so a normal run matches the testing APK and the live
+website:
 
 ```bash
 flutter pub get
 flutter run
 ```
 
-On the login screen, use the Pet Owner, Veterinarian, or Shelter Admin demo button to inspect that role. The sample email/password fields also open the Pet Owner dashboard.
+To intentionally open the isolated design/demo data instead, run:
+
+```bash
+flutter run --dart-define=USE_FIREBASE=false
+```
+
+In demo mode, use the Pet Owner, Veterinarian, or Shelter Admin demo button on
+the login screen to inspect that role.
+
+### Fresh setup on Windows
+
+Open PowerShell in the extracted/cloned folder that contains `pubspec.yaml`,
+then run:
+
+```powershell
+flutter clean
+flutter pub get
+flutter run -d chrome
+```
+
+When cloning from GitHub, make sure to use the current application branch:
+
+```powershell
+git clone --branch feat/pawfectcare-foundation --single-branch https://github.com/Unzela-Waseem/petcare.git PawfectCare
+cd PawfectCare
+flutter clean
+flutter pub get
+flutter run -d chrome
+```
 
 ## Connected production Firebase
 
@@ -58,7 +88,8 @@ Cloud Storage and Cloud Functions require the Blaze plan for this project. The c
 
 The Firebase-connected app supports a no-card hybrid fallback. Pet, profile, adoption-listing, and success-story images can sync through Cloudinary, while confidential medical reports remain in private application storage on Android/iOS. Appointment, vaccination, deworming, and clinical follow-up reminders are scheduled on-device. Firestore records continue to sync, but medical files do not sync to another device and server-originated adoption/blog notifications still require Functions.
 
-Run the connected web app with the restricted unsigned Cloudinary preset:
+The values below are now safe public defaults in the Flutter client. They can
+still be overridden explicitly for another Firebase/Cloudinary environment:
 
 ```bash
 flutter run -d chrome \
@@ -102,7 +133,7 @@ flutter run -d chrome \
   --dart-define=FCM_WEB_VAPID_KEY=YOUR_PUBLIC_VAPID_KEY
 ```
 
-Demo builds continue to work without Firebase configuration.
+Demo builds remain available with `--dart-define=USE_FIREBASE=false`.
 
 Catalog/blog publishing, role/account administration, and notification fan-out remain trusted-backend-only. Appointment booking and veterinarian grants are committed atomically and verified with `getAfter()` rules, so a client cannot grant access without a valid appointment or book one slot twice.
 

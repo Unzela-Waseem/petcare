@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pawfect_care/app/pawfect_care_app.dart';
 import 'package:pawfect_care/data/repositories/demo_auth_repository.dart';
 import 'package:pawfect_care/data/services/session_store.dart';
+import 'package:pawfect_care/domain/models/user_role.dart';
 import 'package:pawfect_care/presentation/controllers/auth_controller.dart';
 
 void main() {
@@ -30,8 +31,9 @@ void main() {
 
     await tester.pumpWidget(PawfectCareApp(authController: controller));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Continue as Veterinarian'));
-    await tester.tap(find.text('Continue as Veterinarian'));
+    final signIn = controller.signInDemo(UserRole.veterinarian);
+    await tester.pump(const Duration(milliseconds: 250));
+    await signIn;
     await tester.pumpAndSettle();
 
     expect(find.text('Veterinarian'), findsOneWidget);

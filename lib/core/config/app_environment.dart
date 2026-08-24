@@ -1,7 +1,7 @@
 abstract final class AppEnvironment {
   static const usesFirebase = bool.fromEnvironment(
     'USE_FIREBASE',
-    defaultValue: false,
+    defaultValue: true,
   );
 
   static const usesFirebaseStorage = bool.fromEnvironment(
@@ -16,10 +16,12 @@ abstract final class AppEnvironment {
 
   static const cloudinaryCloudName = String.fromEnvironment(
     'CLOUDINARY_CLOUD_NAME',
+    defaultValue: 'dc1w5stzg',
   );
 
   static const cloudinaryUploadPreset = String.fromEnvironment(
     'CLOUDINARY_UPLOAD_PRESET',
+    defaultValue: 'pawfactcare_unsigned',
   );
 
   static bool get usesCloudinary =>
