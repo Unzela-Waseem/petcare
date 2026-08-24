@@ -1,6 +1,7 @@
 import '../../domain/models/app_user.dart';
 import '../../domain/models/care_models.dart';
 import '../../domain/models/pet.dart';
+import '../../domain/models/user_role.dart';
 import '../../domain/repositories/care_repository.dart';
 
 class DemoCareRepository implements CareRepository {
@@ -115,6 +116,7 @@ class DemoCareRepository implements CareRepository {
   final List<CareAppointment> _appointments = [];
   final List<AvailabilitySlot> _slots = [];
   final List<AdoptionRequest> _adoptionRequests = [];
+  final List<CommunityRequest> _communityRequests = [];
   final List<ProductItem> _products;
   final List<BlogArticle> _blogs;
   final Set<String> _wishlist = {};
@@ -476,11 +478,11 @@ class DemoCareRepository implements CareRepository {
 
   @override
   Stream<List<CommunityRequest>> watchVolunteerRequests(AppUser user) =>
-      Stream.value(const []);
+      _watchCommunityDemo(user, const {'volunteer', 'donation'});
 
   @override
   Stream<List<CommunityRequest>> watchContactMessages(AppUser user) =>
-      Stream.value(const []);
+      _watchCommunityDemo(user, const {'inquiry'});
 
   @override
   Future<String> submitCommunityRequest({
@@ -488,13 +490,58 @@ class DemoCareRepository implements CareRepository {
     required String shelterId,
     required String kind,
     required String message,
-  }) async => 'demo-community-${DateTime.now().microsecondsSinceEpoch}';
+  }) async {
+    final id = 'demo-community-${DateTime.now().microsecondsSinceEpoch}';
+    _communityRequests.add(
+      CommunityRequest(
+        id: id,
+        shelterId: shelterId,
+        userId: user.uid,
+        userName: user.name,
+        kind: kind,
+        message: message.trim(),
+        status: 'pending',
+        createdAt: DateTime.now(),
+      ),
+    );
+    return id;
+  }
 
   @override
   Future<void> updateCommunityRequestStatus({
     required CommunityRequest request,
     required String status,
-  }) async {}
+  }) async {
+    final index = _communityRequests.indexWhere(
+      (item) => item.id == request.id,
+    );
+    if (index < 0) return;
+    _communityRequests[index] = CommunityRequest(
+      id: request.id,
+      shelterId: request.shelterId,
+      userId: request.userId,
+      userName: request.userName,
+      kind: request.kind,
+      message: request.message,
+      status: status,
+      createdAt: request.createdAt,
+    );
+  }
+
+  Stream<List<CommunityRequest>> _watchCommunityDemo(
+    AppUser user,
+    Set<String> kinds,
+  ) => Stream.value(
+    _communityRequests
+        .where(
+          (request) =>
+              kinds.contains(request.kind) &&
+              (request.userId == user.uid ||
+                  (user.role == UserRole.shelterAdmin &&
+                      request.shelterId == 'demo-shelter')),
+        )
+        .toList(),
+  );
 
   @override
   Stream<List<ProductItem>> watchProducts() => Stream.value(_products);

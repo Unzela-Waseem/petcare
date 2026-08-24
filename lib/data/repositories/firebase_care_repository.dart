@@ -581,12 +581,18 @@ class FirebaseCareRepository implements CareRepository {
   Stream<List<SuccessStory>> watchSuccessStories({String? shelterId}) {
     Query<Map<String, dynamic>> query = _db.collection('successStories');
     if (shelterId != null) {
-      query = query.where('shelterId', isEqualTo: shelterId);
+      query = query.where(
+        'adminId',
+        isEqualTo: _auth.currentUser?.uid ?? 'signed-out',
+      );
     } else {
       query = query.where('published', isEqualTo: true);
     }
     return query.snapshots().map((snapshot) {
-      final stories = snapshot.docs.map(_storyFromDoc).toList();
+      final stories = snapshot.docs
+          .map(_storyFromDoc)
+          .where((story) => shelterId == null || story.shelterId == shelterId)
+          .toList();
       stories.sort((a, b) => a.title.compareTo(b.title));
       return stories;
     });

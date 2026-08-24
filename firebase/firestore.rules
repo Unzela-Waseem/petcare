@@ -533,7 +533,8 @@ service cloud.firestore {
 
     match /successStories/{storyId} {
       allow read: if isActive() && (
-        resource.data.published == true || ownsShelter(resource.data.shelterId)
+        resource.data.published == true
+        || resource.data.adminId == request.auth.uid
       );
       allow create: if hasRole('shelterAdmin')
         && request.resource.data.adminId == request.auth.uid
@@ -562,15 +563,13 @@ service cloud.firestore {
         ]);
       allow read: if isActive() && (
         resource.data.userId == request.auth.uid
-        || (
-          resource.data.shelterAdminId == request.auth.uid
-          && ownsShelter(resource.data.shelterId)
-        )
+        || resource.data.shelterAdminId == request.auth.uid
       );
       allow update: if resource.data.shelterAdminId == request.auth.uid
         && ownsShelter(resource.data.shelterId)
         && request.resource.data.userId == resource.data.userId
         && request.resource.data.shelterId == resource.data.shelterId
+        && request.resource.data.status in ['pending', 'approved', 'closed']
         && changedOnly(['status', 'updatedAt']);
       allow delete: if false;
     }
@@ -589,15 +588,13 @@ service cloud.firestore {
         ]);
       allow read: if isActive() && (
         resource.data.userId == request.auth.uid
-        || (
-          resource.data.shelterAdminId == request.auth.uid
-          && ownsShelter(resource.data.shelterId)
-        )
+        || resource.data.shelterAdminId == request.auth.uid
       );
       allow update: if resource.data.shelterAdminId == request.auth.uid
         && ownsShelter(resource.data.shelterId)
         && request.resource.data.userId == resource.data.userId
         && request.resource.data.shelterId == resource.data.shelterId
+        && request.resource.data.status in ['pending', 'approved', 'closed']
         && changedOnly(['status', 'updatedAt']);
       allow delete: if false;
     }

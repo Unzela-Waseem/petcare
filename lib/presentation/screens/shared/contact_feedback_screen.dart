@@ -94,6 +94,19 @@ class ContactFeedbackScreen extends StatelessWidget {
               builder: (_) => CommunityRequestsScreen(
                 user: user,
                 services: services,
+                module: CommunityModule.volunteer,
+              ),
+            ),
+          ),
+          icon: const Icon(Icons.volunteer_activism_outlined),
+          label: const Text('My volunteer & donation requests'),
+        ),
+        OutlinedButton.icon(
+          onPressed: () => Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(
+              builder: (_) => CommunityRequestsScreen(
+                user: user,
+                services: services,
                 module: CommunityModule.contact,
               ),
             ),
@@ -257,7 +270,18 @@ class _CommunityFormState extends State<_CommunityForm> {
         kind: _kind,
         message: _message.text,
       );
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        final messenger = ScaffoldMessenger.of(context);
+        final label = switch (_kind) {
+          'volunteer' => 'Volunteer request',
+          'donation' => 'Donation interest',
+          _ => 'Shelter inquiry',
+        };
+        Navigator.pop(context);
+        messenger.showSnackBar(
+          SnackBar(content: Text('$label submitted privately.')),
+        );
+      }
     } on Object catch (error) {
       if (mounted) {
         _show(

@@ -443,6 +443,13 @@ class CommunityRequestsScreen extends StatelessWidget {
         request: request,
         status: status,
       );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${request.userName} request marked $status.'),
+          ),
+        );
+      }
     } on Object catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

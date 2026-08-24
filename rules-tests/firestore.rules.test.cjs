@@ -133,6 +133,50 @@ async function seedData() {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+    await db.doc('volunteerRequests/volunteer-one').set({
+      shelterId: 'shelter-one',
+      shelterAdminId: 'shelter-a',
+      userId: 'owner-a',
+      userName: 'owner-a',
+      kind: 'volunteer',
+      message: 'I can help on weekends.',
+      status: 'pending',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    await db.doc('contactMessages/contact-one').set({
+      shelterId: 'shelter-one',
+      shelterAdminId: 'shelter-a',
+      userId: 'owner-a',
+      userName: 'owner-a',
+      kind: 'inquiry',
+      message: 'What are your visiting hours?',
+      status: 'pending',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    await db.doc('successStories/private-story').set({
+      shelterId: 'shelter-one',
+      adminId: 'shelter-a',
+      title: 'Coco found a home',
+      story: 'A happy private draft.',
+      published: false,
+      photoPath: null,
+      photoUrl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    await db.doc('successStories/public-story').set({
+      shelterId: 'shelter-one',
+      adminId: 'shelter-a',
+      title: 'Luna found a home',
+      story: 'A published adoption story.',
+      published: true,
+      photoPath: null,
+      photoUrl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
     await db.doc('vetAvailability/slot-open').set({
       veterinarianId: 'vet-a',
       start: new Date('2030-01-10T10:00:00.000Z'),
@@ -388,6 +432,72 @@ describe('PawfectCare Firestore authorization', () => {
       updatedAt: new Date(),
     });
     await assertSucceeds(batch.commit());
+  });
+
+  it('delivers volunteer and contact requests only to their participants', async () => {
+    for (const [collection, documentId] of [
+      ['volunteerRequests', 'volunteer-one'],
+      ['contactMessages', 'contact-one'],
+    ]) {
+      const ownerInbox = await assertSucceeds(
+        authenticated('owner-a')
+          .collection(collection)
+          .where('userId', '==', 'owner-a')
+          .get(),
+      );
+      assert.equal(ownerInbox.size, 1);
+
+      const shelterInbox = await assertSucceeds(
+        authenticated('shelter-a')
+          .collection(collection)
+          .where('shelterAdminId', '==', 'shelter-a')
+          .get(),
+      );
+      assert.equal(shelterInbox.size, 1);
+
+      await assertFails(
+        authenticated('owner-b').doc(`${collection}/${documentId}`).get(),
+      );
+      await assertFails(
+        authenticated('shelter-b').doc(`${collection}/${documentId}`).get(),
+      );
+    }
+  });
+
+  it('allows only the destination shelter to update volunteer status', async () => {
+    await assertSucceeds(
+      authenticated('shelter-a').doc('volunteerRequests/volunteer-one').update({
+        status: 'approved',
+        updatedAt: new Date(),
+      }),
+    );
+    await assertFails(
+      authenticated('owner-a').doc('volunteerRequests/volunteer-one').update({
+        status: 'closed',
+        updatedAt: new Date(),
+      }),
+    );
+  });
+
+  it('shows private success-story drafts only to their shelter admin', async () => {
+    const shelterStories = await assertSucceeds(
+      authenticated('shelter-a')
+        .collection('successStories')
+        .where('adminId', '==', 'shelter-a')
+        .get(),
+    );
+    assert.equal(shelterStories.size, 2);
+
+    const publicStories = await assertSucceeds(
+      authenticated('owner-a')
+        .collection('successStories')
+        .where('published', '==', true)
+        .get(),
+    );
+    assert.equal(publicStories.size, 1);
+    await assertFails(
+      authenticated('owner-a').doc('successStories/private-story').get(),
+    );
   });
 
   it('lets owners add routine health records but blocks clinical fields', async () => {
