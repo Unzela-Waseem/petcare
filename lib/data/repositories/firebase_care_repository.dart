@@ -484,7 +484,23 @@ class FirebaseCareRepository implements CareRepository {
     required AdoptionListing listing,
     required String message,
   }) => _safe(() async {
-    final reference = _db.collection('adoptionRequests').doc();
+    final requests = _db.collection('adoptionRequests');
+    final ownerRequests = await requests
+        .where('ownerId', isEqualTo: owner.uid)
+        .get();
+    final alreadySubmitted = ownerRequests.docs.any((document) {
+      final data = document.data();
+      final status = RequestStatus.parse(data['status'] as String?);
+      return data['listingId'] == listing.id &&
+          status != RequestStatus.rejected;
+    });
+    if (alreadySubmitted) {
+      throw const CareFailure(
+        'You already have an active adoption request for this pet.',
+      );
+    }
+
+    final reference = requests.doc();
     await reference.set({
       'listingId': listing.id,
       'petName': listing.petName,
@@ -504,12 +520,47 @@ class FirebaseCareRepository implements CareRepository {
   Future<void> updateAdoptionRequest({
     required AdoptionRequest request,
     required RequestStatus status,
-  }) => _safe(
-    () => _db.collection('adoptionRequests').doc(request.id).update({
-      'status': status.value,
+  }) => _safe(() async {
+    final requests = _db.collection('adoptionRequests');
+    final requestReference = requests.doc(request.id);
+    if (status != RequestStatus.approved) {
+      await requestReference.update({
+        'status': status.value,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
+    final actorId = _auth.currentUser?.uid;
+    if (actorId == null) {
+      throw const CareFailure('Sign in again to update this request.');
+    }
+    final relatedSnapshot = await requests
+        .where('shelterAdminId', isEqualTo: actorId)
+        .get();
+    final batch = _db.batch();
+    batch.update(requestReference, {
+      'status': RequestStatus.approved.value,
       'updatedAt': FieldValue.serverTimestamp(),
-    }),
-  );
+    });
+    for (final document in relatedSnapshot.docs) {
+      final data = document.data();
+      if (document.id != request.id &&
+          data['listingId'] == request.listingId &&
+          RequestStatus.parse(data['status'] as String?) ==
+              RequestStatus.pending) {
+        batch.update(document.reference, {
+          'status': RequestStatus.rejected.value,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+    }
+    batch.update(_db.collection('adoptionListings').doc(request.listingId), {
+      'status': AdoptionStatus.adopted.value,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    await batch.commit();
+  });
 
   @override
   Stream<List<SuccessStory>> watchSuccessStories({String? shelterId}) {

@@ -121,6 +121,18 @@ async function seedData() {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+    await db.doc('adoptionRequests/request-coco').set({
+      listingId: 'coco',
+      petName: 'Coco',
+      ownerId: 'owner-a',
+      ownerName: 'owner-a',
+      shelterId: 'shelter-one',
+      shelterAdminId: 'shelter-a',
+      message: 'A safe and loving home.',
+      status: 'pending',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
     await db.doc('vetAvailability/slot-open').set({
       veterinarianId: 'vet-a',
       start: new Date('2030-01-10T10:00:00.000Z'),
@@ -337,6 +349,45 @@ describe('PawfectCare Firestore authorization', () => {
         photoUrl: null,
       }),
     );
+  });
+
+  it('scopes adoption request inboxes to the owner and shelter admin', async () => {
+    const ownerInbox = await assertSucceeds(
+      authenticated('owner-a')
+        .collection('adoptionRequests')
+        .where('ownerId', '==', 'owner-a')
+        .get(),
+    );
+    assert.equal(ownerInbox.size, 1);
+
+    const shelterInbox = await assertSucceeds(
+      authenticated('shelter-a')
+        .collection('adoptionRequests')
+        .where('shelterAdminId', '==', 'shelter-a')
+        .get(),
+    );
+    assert.equal(shelterInbox.size, 1);
+
+    await assertFails(
+      authenticated('owner-b').doc('adoptionRequests/request-coco').get(),
+    );
+    await assertFails(
+      authenticated('shelter-b').doc('adoptionRequests/request-coco').get(),
+    );
+  });
+
+  it('lets the owning shelter admin approve a request and adopt its listing atomically', async () => {
+    const db = authenticated('shelter-a');
+    const batch = db.batch();
+    batch.update(db.doc('adoptionRequests/request-coco'), {
+      status: 'approved',
+      updatedAt: new Date(),
+    });
+    batch.update(db.doc('adoptionListings/coco'), {
+      status: 'adopted',
+      updatedAt: new Date(),
+    });
+    await assertSucceeds(batch.commit());
   });
 
   it('lets owners add routine health records but blocks clinical fields', async () => {

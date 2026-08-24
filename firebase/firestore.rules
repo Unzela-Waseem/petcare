@@ -518,10 +518,7 @@ service cloud.firestore {
         ]);
       allow read: if isActive() && (
         resource.data.ownerId == request.auth.uid
-        || (
-          resource.data.shelterAdminId == request.auth.uid
-          && ownsShelter(resource.data.shelterId)
-        )
+        || resource.data.shelterAdminId == request.auth.uid
       );
       allow update: if resource.data.shelterAdminId == request.auth.uid
         && ownsShelter(resource.data.shelterId)

@@ -4,6 +4,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/config/app_services.dart';
 import '../../../core/widgets/section_heading.dart';
 import '../../../domain/models/app_user.dart';
+import '../../../domain/models/care_models.dart';
 import '../../../domain/models/user_role.dart';
 import 'feature_catalog.dart';
 import 'feature_router.dart';
@@ -62,15 +63,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 18),
                 _RoleChips(role: widget.user.role),
                 const SizedBox(height: 22),
-                _HeroCard(
-                  role: widget.user.role,
-                  onTap: () {
-                    _openFeature(
-                      context,
-                      FeatureCatalog.forRole(widget.user.role).first,
-                    );
-                  },
-                ),
+                _buildHero(context),
                 const SizedBox(height: 24),
                 SectionHeading(
                   title: _sectionTitle(widget.user.role),
@@ -121,6 +114,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
     UserRole.veterinarian => 'Clinical workspace',
     UserRole.shelterAdmin => 'Shelter workspace',
   };
+
+  Widget _buildHero(BuildContext context) {
+    final role = widget.user.role;
+    final feature = role == UserRole.shelterAdmin
+        ? FeatureCatalog.forRole(
+            role,
+          ).firstWhere((item) => item.title == 'Adoption Requests')
+        : FeatureCatalog.forRole(role).first;
+    void openHeroFeature() => _openFeature(context, feature);
+    if (role != UserRole.shelterAdmin) {
+      return _HeroCard(role: role, onTap: openHeroFeature);
+    }
+    return StreamBuilder<List<AdoptionRequest>>(
+      stream: widget.services.care.watchAdoptionRequests(widget.user),
+      builder: (context, snapshot) => _HeroCard(
+        role: role,
+        adoptionRequests: snapshot.data ?? const [],
+        requestLoadFailed: snapshot.hasError,
+        onTap: openHeroFeature,
+      ),
+    );
+  }
 
   void _openFeature(BuildContext context, FeatureAction feature) {
     FeatureRouter.open(
@@ -261,12 +276,25 @@ class _RoleChips extends StatelessWidget {
 }
 
 class _HeroCard extends StatelessWidget {
-  const _HeroCard({required this.role, required this.onTap});
+  const _HeroCard({
+    required this.role,
+    required this.onTap,
+    this.adoptionRequests = const [],
+    this.requestLoadFailed = false,
+  });
   final UserRole role;
   final VoidCallback onTap;
+  final List<AdoptionRequest> adoptionRequests;
+  final bool requestLoadFailed;
 
   @override
   Widget build(BuildContext context) {
+    final pendingRequests = adoptionRequests
+        .where((request) => request.status == RequestStatus.pending)
+        .toList();
+    final latestPending = pendingRequests.isEmpty
+        ? null
+        : pendingRequests.first;
     final content = switch (role) {
       UserRole.petOwner => (
         eyebrow: 'NEXT UP',
@@ -281,10 +309,22 @@ class _HeroCard extends StatelessWidget {
         button: 'Open Patient',
       ),
       UserRole.shelterAdmin => (
-        eyebrow: '3 NEW REQUESTS',
-        title: 'Coco may have\nfound a home.',
-        detail: 'Application ready to review',
-        button: 'Review Now',
+        eyebrow: requestLoadFailed
+            ? 'REQUESTS UNAVAILABLE'
+            : '${pendingRequests.length} PENDING ${pendingRequests.length == 1 ? 'REQUEST' : 'REQUESTS'}',
+        title: requestLoadFailed
+            ? 'Applications could\nnot be loaded.'
+            : latestPending != null
+            ? '${latestPending.petName} may have\nfound a home.'
+            : adoptionRequests.isEmpty
+            ? 'No applications\nwaiting.'
+            : 'All applications\nreviewed.',
+        detail: requestLoadFailed
+            ? 'Tap to open the request inbox'
+            : latestPending != null
+            ? '${latestPending.ownerName} is ready for review'
+            : '${adoptionRequests.length} total application${adoptionRequests.length == 1 ? '' : 's'}',
+        button: pendingRequests.isEmpty ? 'View Requests' : 'Review Now',
       ),
     };
     return InkWell(

@@ -394,6 +394,17 @@ class DemoCareRepository implements CareRepository {
     required AdoptionListing listing,
     required String message,
   }) async {
+    final alreadySubmitted = _adoptionRequests.any(
+      (request) =>
+          request.ownerId == owner.uid &&
+          request.listingId == listing.id &&
+          request.status != RequestStatus.rejected,
+    );
+    if (alreadySubmitted) {
+      throw const CareFailure(
+        'You already have an active adoption request for this pet.',
+      );
+    }
     final id = 'demo-request-${DateTime.now().microsecondsSinceEpoch}';
     _adoptionRequests.add(
       AdoptionRequest(
@@ -416,7 +427,40 @@ class DemoCareRepository implements CareRepository {
   Future<void> updateAdoptionRequest({
     required AdoptionRequest request,
     required RequestStatus status,
-  }) async {}
+  }) async {
+    final index = _adoptionRequests.indexWhere((item) => item.id == request.id);
+    if (index < 0) return;
+    _adoptionRequests[index] = _requestWithStatus(request, status);
+    if (status == RequestStatus.approved) {
+      for (var i = 0; i < _adoptionRequests.length; i++) {
+        final item = _adoptionRequests[i];
+        if (item.id != request.id &&
+            item.listingId == request.listingId &&
+            item.status == RequestStatus.pending) {
+          _adoptionRequests[i] = _requestWithStatus(
+            item,
+            RequestStatus.rejected,
+          );
+        }
+      }
+    }
+  }
+
+  AdoptionRequest _requestWithStatus(
+    AdoptionRequest request,
+    RequestStatus status,
+  ) => AdoptionRequest(
+    id: request.id,
+    listingId: request.listingId,
+    petName: request.petName,
+    ownerId: request.ownerId,
+    ownerName: request.ownerName,
+    shelterId: request.shelterId,
+    shelterAdminId: request.shelterAdminId,
+    status: status,
+    message: request.message,
+    createdAt: request.createdAt,
+  );
 
   @override
   Stream<List<SuccessStory>> watchSuccessStories({String? shelterId}) =>
