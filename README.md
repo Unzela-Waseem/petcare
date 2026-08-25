@@ -30,6 +30,11 @@ The UI follows a warm editorial pet-care system: cream canvases, peach feature p
 
 The complete architecture and security contract live in [`docs/architecture.md`](docs/architecture.md). The specification-by-specification completion evidence and remaining account-owner release actions are in [`docs/requirements-matrix.md`](docs/requirements-matrix.md).
 
+Submission links, public Firebase/Cloudinary identifiers, evaluator access, and
+safe clone/run instructions are collected in
+[`SUBMISSION_README.md`](SUBMISSION_README.md). Private passwords and server
+secrets are intentionally excluded from the repository.
+
 ## Run the app
 
 The checked-in app defaults to the connected Firebase project and the restricted
