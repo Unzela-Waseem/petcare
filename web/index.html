@@ -43,7 +43,19 @@
   -->
   <script>
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function () {
+      window.addEventListener('load', async function () {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          const workers = [
+            registration.active,
+            registration.installing,
+            registration.waiting,
+          ];
+          if (workers.some((worker) =>
+              worker && worker.scriptURL.includes('flutter_service_worker.js'))) {
+            await registration.unregister();
+          }
+        }
         navigator.serviceWorker.register('firebase-messaging-sw.js', {
           scope: '/firebase-cloud-messaging-push-scope',
         });
