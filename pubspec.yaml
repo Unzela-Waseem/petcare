@@ -74,6 +74,8 @@ flutter:
 
   assets:
     - assets/images/pawfect_pet_family_cutout.png
+    - assets/images/onboarding_dog_head.png
+    - assets/images/onboarding_cat_orange.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
