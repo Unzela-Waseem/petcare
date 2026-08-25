@@ -149,32 +149,85 @@ class DemoCareRepository implements CareRepository {
   Future<void> deletePet(Pet pet) async =>
       _pets.removeWhere((item) => item.id == pet.id);
 
+  final Map<String, List<HealthRecord>> _healthRecordsStore = {};
+
   @override
-  Stream<List<HealthRecord>> watchHealthRecords(String petId) => Stream.value([
-    HealthRecord(
-      id: 'demo-health',
-      petId: petId,
-      type: HealthRecordType.vaccination,
-      title: 'Rabies vaccination',
-      date: DateTime(2025, 11, 4),
-      dueDate: DateTime(2026, 11, 4),
-      notes: 'Annual booster reminder.',
-    ),
-  ]);
+  Stream<List<HealthRecord>> watchHealthRecords(String petId) {
+    if (!_healthRecordsStore.containsKey(petId)) {
+      _healthRecordsStore[petId] = [
+        HealthRecord(
+          id: 'demo-health-$petId',
+          petId: petId,
+          type: HealthRecordType.vaccination,
+          title: 'Rabies vaccination',
+          date: DateTime.now().subtract(const Duration(days: 30)),
+          dueDate: DateTime.now().add(const Duration(days: 5)),
+          notes: 'Annual booster reminder.',
+        ),
+      ];
+    }
+    return Stream.value(_healthRecordsStore[petId]!);
+  }
 
   @override
   Future<String> saveHealthRecord({
     required AppUser actor,
     required HealthRecord record,
-  }) async => record.id.isEmpty
-      ? 'demo-health-${DateTime.now().microsecondsSinceEpoch}'
-      : record.id;
+  }) async {
+    final petId = record.petId;
+    final records = _healthRecordsStore[petId] ?? [];
+    final id = record.id.isEmpty
+        ? 'demo-health-${DateTime.now().microsecondsSinceEpoch}'
+        : record.id;
+    final updatedRecord = HealthRecord(
+      id: id,
+      petId: record.petId,
+      type: record.type,
+      title: record.title,
+      date: record.date,
+      veterinarianId: record.veterinarianId,
+      diagnosis: record.diagnosis,
+      treatment: record.treatment,
+      prescription: record.prescription,
+      dueDate: record.dueDate,
+      followUpDate: record.followUpDate,
+      notes: record.notes,
+      reportPaths: record.reportPaths,
+    );
+    final index = records.indexWhere((r) => r.id == id);
+    if (index >= 0) {
+      records[index] = updatedRecord;
+    } else {
+      records.add(updatedRecord);
+    }
+    _healthRecordsStore[petId] = records;
+
+    if (record.dueDate != null) {
+      var recipientId = actor.uid;
+      for (final pet in _pets) {
+        if (pet.id == record.petId) {
+          recipientId = pet.ownerId;
+          break;
+        }
+      }
+      _addNotification(
+        title: '${record.type.label} Reminder Set',
+        body:
+            'Reminder set for ${record.title} (Due: ${record.dueDate!.day}/${record.dueDate!.month}/${record.dueDate!.year}).',
+        type: 'vaccination',
+        recipientId: recipientId,
+      );
+    }
+    return id;
+  }
 
   @override
   Future<void> deleteHealthRecord({
     required AppUser actor,
     required HealthRecord record,
-  }) async {}
+  }) async {
+    _healthRecordsStore[record.petId]?.removeWhere((r) => r.id == record.id);
+  }
 
   @override
   Stream<List<VeterinarianProfile>> watchVeterinarians() => Stream.value(const [
@@ -265,6 +318,20 @@ class DemoCareRepository implements CareRepository {
         status: AppointmentStatus.pending,
       ),
     );
+    _addNotification(
+      title: 'Appointment Booked',
+      body:
+          'Your appointment for ${pet.name} with ${veterinarian.name} is booked.',
+      type: 'appointment',
+      recipientId: owner.uid,
+    );
+    _addNotification(
+      title: 'New Appointment Booking',
+      body:
+          '${owner.name} booked an appointment for ${pet.name} on ${slot.start.day}/${slot.start.month} at ${slot.start.hour}:${slot.start.minute.toString().padLeft(2, '0')}.',
+      type: 'appointment',
+      recipientId: veterinarian.uid,
+    );
     return slot.id;
   }
 
@@ -304,6 +371,13 @@ class DemoCareRepository implements CareRepository {
         status: AppointmentStatus.pending,
       ),
     );
+    _addNotification(
+      title: 'Appointment Rescheduled',
+      body:
+          'Appointment for ${appointment.petName} has been rescheduled to ${newSlot.start.day}/${newSlot.start.month} at ${newSlot.start.hour}:${newSlot.start.minute.toString().padLeft(2, '0')}.',
+      type: 'appointment',
+      recipientId: appointment.ownerId,
+    );
     return newSlot.id;
   }
 
@@ -325,6 +399,20 @@ class DemoCareRepository implements CareRepository {
       dateTime: appointment.dateTime,
       reason: appointment.reason,
       status: status,
+    );
+    _addNotification(
+      title: 'Appointment ${status.label}',
+      body:
+          'Your appointment for ${appointment.petName} with ${appointment.veterinarianName} has been ${status.label.toLowerCase()}.',
+      type: 'appointment',
+      recipientId: appointment.ownerId,
+    );
+    _addNotification(
+      title: 'Appointment ${status.label}',
+      body:
+          'Appointment for ${appointment.petName} has been marked as ${status.label.toLowerCase()}.',
+      type: 'appointment',
+      recipientId: appointment.veterinarianId,
     );
     if (status == AppointmentStatus.cancelled) {
       final slotIndex = _slots.indexWhere(
@@ -427,6 +515,20 @@ class DemoCareRepository implements CareRepository {
         createdAt: DateTime.now(),
       ),
     );
+    _addNotification(
+      title: 'Adoption Application Sent',
+      body:
+          'Your application to adopt ${listing.petName} has been submitted to the shelter.',
+      type: 'adoption',
+      recipientId: owner.uid,
+    );
+    _addNotification(
+      title: 'New Adoption Application',
+      body:
+          '${owner.name} submitted an application to adopt ${listing.petName}.',
+      type: 'adoption',
+      recipientId: listing.adminId,
+    );
     return id;
   }
 
@@ -438,6 +540,13 @@ class DemoCareRepository implements CareRepository {
     final index = _adoptionRequests.indexWhere((item) => item.id == request.id);
     if (index < 0) return;
     _adoptionRequests[index] = _requestWithStatus(request, status);
+    _addNotification(
+      title: 'Adoption Application Update',
+      body:
+          'Your application for ${request.petName} has been ${status.label.toLowerCase()}.',
+      type: 'adoption',
+      recipientId: request.ownerId,
+    );
     if (status == RequestStatus.approved) {
       for (var i = 0; i < _adoptionRequests.length; i++) {
         final item = _adoptionRequests[i];
@@ -447,6 +556,12 @@ class DemoCareRepository implements CareRepository {
           _adoptionRequests[i] = _requestWithStatus(
             item,
             RequestStatus.rejected,
+          );
+          _addNotification(
+            title: 'Adoption Application Update',
+            body: 'Your application for ${item.petName} has been rejected.',
+            type: 'adoption',
+            recipientId: item.ownerId,
           );
         }
       }
@@ -572,6 +687,14 @@ class DemoCareRepository implements CareRepository {
       status: status,
       createdAt: request.createdAt,
     );
+    _addNotification(
+      title: request.kind == 'inquiry'
+          ? 'Shelter Inquiry Update'
+          : 'Community Request Update',
+      body: 'Your ${request.kind} request is now $status.',
+      type: 'community',
+      recipientId: request.userId,
+    );
   }
 
   Stream<List<CommunityRequest>> _watchCommunityDemo(
@@ -615,15 +738,88 @@ class DemoCareRepository implements CareRepository {
     required bool saved,
   }) async => saved ? _bookmarks.add(blogId) : _bookmarks.remove(blogId);
 
+  final Map<String, List<UserNotification>> _notificationsByUser = {
+    'demo-owner': [
+      UserNotification(
+        id: 'welcome-notif-owner',
+        title: 'Welcome to PawfectCare',
+        body:
+            'Keep track of your pets, vaccinations, and vet appointments all in one place!',
+        createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+        type: 'general',
+      ),
+    ],
+    'demo-veterinarian': [
+      UserNotification(
+        id: 'welcome-notif-vet',
+        title: 'Welcome Dr. Maya Chen',
+        body: 'You have active appointment slots and assigned pets ready.',
+        createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+        type: 'general',
+      ),
+    ],
+  };
+  final StreamController<String> _notificationChanges =
+      StreamController<String>.broadcast();
+
   @override
-  Stream<List<UserNotification>> watchNotifications(String uid) =>
-      Stream.value(const []);
+  Stream<List<UserNotification>> watchNotifications(String uid) async* {
+    List<UserNotification> forUser() => List<UserNotification>.unmodifiable(
+      (_notificationsByUser[uid] ?? const <UserNotification>[]).reversed,
+    );
+
+    yield forUser();
+    await for (final changedUid in _notificationChanges.stream) {
+      if (changedUid == uid) yield forUser();
+    }
+  }
+
+  void _addNotification({
+    required String title,
+    required String body,
+    required String type,
+    required String recipientId,
+    String? resourceId,
+  }) {
+    final notifications = _notificationsByUser.putIfAbsent(
+      recipientId,
+      () => <UserNotification>[],
+    );
+    notifications.add(
+      UserNotification(
+        id: 'notif-${DateTime.now().microsecondsSinceEpoch}',
+        title: title,
+        body: body,
+        createdAt: DateTime.now(),
+        type: type,
+        resourceId: resourceId,
+      ),
+    );
+    _notificationChanges.add(recipientId);
+  }
 
   @override
   Future<void> markNotificationRead({
     required String uid,
     required String notificationId,
-  }) async {}
+  }) async {
+    final notifications = _notificationsByUser[uid];
+    if (notifications == null) return;
+    final index = notifications.indexWhere((n) => n.id == notificationId);
+    if (index != -1) {
+      final old = notifications[index];
+      notifications[index] = UserNotification(
+        id: old.id,
+        title: old.title,
+        body: old.body,
+        createdAt: old.createdAt,
+        readAt: DateTime.now(),
+        type: old.type,
+        resourceId: old.resourceId,
+      );
+      _notificationChanges.add(uid);
+    }
+  }
 
   @override
   Future<String> submitFeedback({

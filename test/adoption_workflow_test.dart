@@ -23,6 +23,14 @@ void main() {
     role: UserRole.shelterAdmin,
     emailVerified: true,
   );
+  const veterinarian = AppUser(
+    uid: 'demo-veterinarian',
+    name: 'Dr. Maya Chen',
+    email: 'vet@test.pawfectcare.app',
+    phone: '+92 300 0000002',
+    role: UserRole.veterinarian,
+    emailVerified: true,
+  );
 
   test(
     'owners can track adoption requests and cannot submit duplicates',
@@ -122,6 +130,75 @@ void main() {
         ),
         isTrue,
       );
+    },
+  );
+
+  test('demo health records persist and reminders stay owner-scoped', () async {
+    final repository = DemoCareRepository();
+    final record = HealthRecord(
+      id: '',
+      petId: 'demo-luna',
+      type: HealthRecordType.vaccination,
+      title: 'Distemper booster',
+      date: DateTime(2026, 8, 25),
+      dueDate: DateTime(2026, 9, 25),
+      veterinarianId: veterinarian.uid,
+      notes: 'Booster recorded during the visit.',
+    );
+
+    final id = await repository.saveHealthRecord(
+      actor: veterinarian,
+      record: record,
+    );
+    final records = await repository.watchHealthRecords('demo-luna').first;
+    expect(records.any((item) => item.id == id), isTrue);
+
+    final ownerNotifications = await repository
+        .watchNotifications('demo-owner')
+        .first;
+    final vetNotifications = await repository
+        .watchNotifications(veterinarian.uid)
+        .first;
+    expect(
+      ownerNotifications.any((item) => item.title.contains('Reminder Set')),
+      isTrue,
+    );
+    expect(
+      vetNotifications.any((item) => item.title.contains('Reminder Set')),
+      isFalse,
+    );
+  });
+
+  test(
+    'demo adoption notifications are private and can be marked read',
+    () async {
+      final repository = DemoCareRepository();
+      final listing = (await repository.watchAdoptionListings().first).first;
+      await repository.submitAdoptionRequest(
+        owner: owner,
+        listing: listing,
+        message: 'A safe and loving home.',
+      );
+
+      final ownerNotifications = await repository
+          .watchNotifications(owner.uid)
+          .first;
+      final shelterNotifications = await repository
+          .watchNotifications(shelterAdmin.uid)
+          .first;
+      expect(ownerNotifications, hasLength(1));
+      expect(ownerNotifications.single.title, 'Adoption Application Sent');
+      expect(shelterNotifications, hasLength(1));
+      expect(shelterNotifications.single.title, 'New Adoption Application');
+
+      await repository.markNotificationRead(
+        uid: owner.uid,
+        notificationId: ownerNotifications.single.id,
+      );
+      final readNotifications = await repository
+          .watchNotifications(owner.uid)
+          .first;
+      expect(readNotifications.single.readAt, isNotNull);
     },
   );
 }
