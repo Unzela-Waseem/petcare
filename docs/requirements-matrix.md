@@ -9,8 +9,8 @@ This matrix maps the supplied specification to the implemented production path. 
 | Pet Owner: pets | Search by name/breed; create, edit, delete, view details; validated image selection/upload | CRUD live; ordinary images sync through restricted Cloudinary without billing |
 | Pet Owner: health | Pet selector, medical-requirement search, type filters, vaccination/deworming/allergy routine records, due dates, read-only clinical history | Firestore live; due reminders run locally; private documents remain on the Android/iOS device |
 | Pet Owner: appointments | Search vets by name/clinic/specialty/location, choose pet and open time, reason, book, cancel, reschedule, statuses/history | Atomic Firestore workflow live |
-| Store | Food, Grooming, Toys, Health categories; image/name/description/price; search, filter, private wishlist, validated HTTPS purchase link | Four products seeded live |
-| Care tips | Training, Nutrition, First Aid, Pet Care; keyword search, category filter, private bookmarks, explicit offline save/remove and offline fallback | Four guides seeded live |
+| Store | Food, Grooming, Toys, Health categories; image/name/description/price; search, filter, private wishlist, validated HTTPS purchase link | Twenty products seeded live; five per category |
+| Care tips | Training, Nutrition, First Aid, Pet Care; keyword search, category filter, private bookmarks, explicit offline save/remove and offline fallback | Sixteen guides seeded live; four per category |
 | Adoption | Search/filter listings, submit private request, view owner history | Firestore live; listing images sync through restricted Cloudinary |
 | Veterinarian | Assigned-pet search, protected patient history, diagnosis/treatment/prescription/follow-up, report selection, availability CRUD, appointment confirm/reschedule/complete/cancel | Firestore live; reports persist on the current device and follow-ups schedule locally |
 | Shelter Admin | Create shelter profile; own listing CRUD/status; review/approve/reject requests; private story drafts, image validation, edit/publish/unpublish/delete, public gallery preview; manage volunteer/donation/inquiry statuses | Firestore live; published stories are readable in the Pet Owner and Veterinarian galleries; ordinary images sync through restricted Cloudinary |
@@ -28,7 +28,7 @@ This matrix maps the supplied specification to the implemented production path. 
 - Firebase Emulator Suite: 29 Firestore/Storage authorization tests pass, including success-story draft privacy, image-required publishing, and cancelled-slot rebooking without history overwrite.
 - Functions: syntax check and ESLint pass; production dependency audit reports zero vulnerabilities; all trigger definitions load in the emulator.
 - Firestore rules and indexes are deployed to `pawfectcare-unzela-2026`.
-- Live Firestore contains four products and four care guides.
+- Live Firestore contains twenty products and sixteen care guides, evenly distributed across the required categories.
 - The restricted Cloudinary preset passed a real web upload, Firestore profile update, and HTTPS image-render test.
 - Local media persistence and deterministic reminder-ID tests pass.
 

@@ -79,7 +79,7 @@ The repository is connected to Firebase project `pawfectcare-unzela-2026`:
 - Email/Password Authentication is enabled and requires a password.
 - The default Standard Firestore database is in `asia-south1` (Mumbai) with deletion protection enabled.
 - Firestore rules and composite indexes are deployed.
-- Four store products and four published care guides are live in Firestore.
+- Twenty store products and sixteen published care guides are live in Firestore, evenly covering every required category.
 - The restricted `pawfactcare_unsigned` Cloudinary preset is configured and has passed an end-to-end web profile-image upload.
 - Cloud Messaging, Firebase Installations, and Cloud Storage APIs are enabled.
 - The generated Firebase client configuration is checked in. These client identifiers are not server credentials; authorization remains enforced by Firebase Authentication and the checked-in rules.

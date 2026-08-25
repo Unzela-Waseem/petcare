@@ -5,6 +5,7 @@ import '../../domain/models/care_models.dart';
 import '../../domain/models/pet.dart';
 import '../../domain/models/user_role.dart';
 import '../../domain/repositories/care_repository.dart';
+import '../seed/catalog_seed.dart';
 
 class DemoCareRepository implements CareRepository {
   DemoCareRepository()
@@ -29,79 +30,8 @@ class DemoCareRepository implements CareRepository {
           gender: 'Male',
         ),
       ],
-      _products = const [
-        ProductItem(
-          id: 'nutrition',
-          name: 'Everyday Nutrition',
-          description: 'Balanced adult pet food.',
-          price: 24,
-          category: 'Food',
-          purchaseUrl:
-              'https://www.google.com/search?q=balanced+adult+pet+food',
-        ),
-        ProductItem(
-          id: 'grooming',
-          name: 'Gentle Grooming Kit',
-          description: 'Brush, shampoo, and paw balm.',
-          price: 32,
-          category: 'Grooming',
-          purchaseUrl: 'https://www.google.com/search?q=pet+grooming+kit',
-        ),
-        ProductItem(
-          id: 'toy',
-          name: 'Enrichment Puzzle Toy',
-          description: 'A reusable treat puzzle for supervised play.',
-          price: 18,
-          category: 'Toys',
-          purchaseUrl: 'https://www.google.com/search?q=pet+puzzle+toy',
-        ),
-        ProductItem(
-          id: 'health',
-          name: 'Pet First-Aid Kit',
-          description: 'Practical supplies for minor emergencies.',
-          price: 29,
-          category: 'Health',
-          purchaseUrl: 'https://www.google.com/search?q=pet+first+aid+kit',
-        ),
-      ],
-      _blogs = [
-        BlogArticle(
-          id: 'calm-vet',
-          title: 'A calmer first vet visit',
-          category: 'Training',
-          summary: 'Simple preparation steps for a low-stress visit.',
-          content:
-              'Practice short carrier or car sessions, reward calm behavior, and bring familiar treats. Share behavior concerns with the clinic before arrival.',
-          publishedAt: DateTime(2026, 8, 12),
-        ),
-        BlogArticle(
-          id: 'first-aid',
-          title: 'Pet first-aid essentials',
-          category: 'First Aid',
-          summary: 'What belongs in a practical pet first-aid kit.',
-          content:
-              'Keep gauze, saline, gloves, a digital thermometer, emergency contacts, and current medication details together. First aid never replaces veterinary care.',
-          publishedAt: DateTime(2026, 8, 10),
-        ),
-        BlogArticle(
-          id: 'nutrition-basics',
-          title: 'Everyday nutrition basics',
-          category: 'Nutrition',
-          summary: 'Build a consistent and balanced feeding routine.',
-          content:
-              'Choose food formulated for your pet’s species and life stage, measure portions, provide fresh water, and discuss weight changes with a veterinarian.',
-          publishedAt: DateTime(2026, 8, 8),
-        ),
-        BlogArticle(
-          id: 'daily-care',
-          title: 'A simple daily pet-care checklist',
-          category: 'Pet Care',
-          summary: 'Small daily habits that support long-term wellbeing.',
-          content:
-              'Check appetite, water intake, energy, toileting, coat, eyes, and mobility. Record meaningful changes and seek veterinary advice when symptoms persist.',
-          publishedAt: DateTime(2026, 8, 6),
-        ),
-      ] {
+      _products = demoCatalogProducts,
+      _blogs = buildDemoCatalogBlogs() {
     final start = DateTime.now().add(const Duration(days: 2));
     _slots.add(
       AvailabilitySlot(

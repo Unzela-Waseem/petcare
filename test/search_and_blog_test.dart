@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pawfect_care/core/config/app_services.dart';
 import 'package:pawfect_care/core/theme/app_theme.dart';
 import 'package:pawfect_care/core/utils/search_matcher.dart';
+import 'package:pawfect_care/data/repositories/demo_care_repository.dart';
 import 'package:pawfect_care/domain/models/app_user.dart';
 import 'package:pawfect_care/domain/models/user_role.dart';
 import 'package:pawfect_care/presentation/screens/shared/dashboard_screen.dart';
@@ -46,6 +47,26 @@ void main() {
         FeatureCatalog.forRole(role).any((item) => item.title == 'Care Tips'),
         isTrue,
       );
+    }
+  });
+
+  test('demo catalog has several items in every required category', () async {
+    final repository = DemoCareRepository();
+    final products = await repository.watchProducts().first;
+    final blogs = await repository.watchBlogs().first;
+
+    expect(products, hasLength(20));
+    expect(blogs, hasLength(16));
+    for (final category in const ['Food', 'Grooming', 'Toys', 'Health']) {
+      expect(products.where((item) => item.category == category), hasLength(5));
+    }
+    for (final category in const [
+      'Training',
+      'Nutrition',
+      'First Aid',
+      'Pet Care',
+    ]) {
+      expect(blogs.where((item) => item.category == category), hasLength(4));
     }
   });
 
