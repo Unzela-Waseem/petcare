@@ -62,7 +62,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       subtitle:
           'Bring your favourite pet to your home. Adopt pet of your choice to get company or entertainment, pets comfort us and give us companionship.',
       cardHeading: '',
-      imagePath: 'assets/images/onboarding_dog_purple.png',
+      imagePath: 'assets/images/onboarding_dog_head.png',
       bgColor: Colors.white,
       accentColor: Color(0xFFC48BE8),
       badgeIcon: Icons.pets_rounded,
@@ -105,7 +105,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   @override
   Widget build(BuildContext context) {
     final currentPage = _pages[_page];
-    final isColoredBg = currentPage.style != _PageStyle.classic;
+    final isColoredBg = currentPage.style == _PageStyle.orangeCard;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 500),
@@ -302,6 +302,7 @@ class _PurpleCardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
     final fadeAnim = CurvedAnimation(parent: animController, curve: Curves.easeIn);
     final slideAnim = Tween<Offset>(
       begin: const Offset(0, 0.06),
@@ -314,55 +315,100 @@ class _PurpleCardPage extends StatelessWidget {
         position: slideAnim,
         child: Container(
           color: Colors.white,
-          child: Stack(
-            fit: StackFit.expand,
+          child: Column(
             children: [
-              // Exact reference design as background
-              Image.asset(
-                data.imagePath,
-                fit: BoxFit.cover,
-                alignment: Alignment.center,
+              // ── Purple gradient card with dog image ──────────
+              Container(
+                height: size.height * 0.52,
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xFFE8C5F8),
+                      Color(0xFFC48BE8),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(40),
+                    bottomRight: Radius.circular(40),
+                  ),
+                ),
+                child: Stack(
+                  alignment: Alignment.bottomCenter,
+                  children: [
+                    Positioned(
+                      bottom: 0,
+                      child: Image.asset(
+                        data.imagePath,
+                        height: size.height * 0.44,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              // Bottom clickable area for 'Next ->'
-              Positioned(
-                bottom: 24,
-                right: 24,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(24),
-                    onTap: onNext,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
+              const SizedBox(height: 32),
+              // ── Title ─────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 28),
+                child: Text(
+                  data.title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1A1A2E),
+                    height: 1.2,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              // ── Subtitle ──────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  data.subtitle,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF7A7A9D),
+                    height: 1.6,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              // ── Next button ───────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(28, 0, 28, 36),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton(
+                    onPressed: onNext,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFC48BE8),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
                       ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.5),
+                      elevation: 4,
+                      shadowColor: const Color(0xFFC48BE8).withValues(alpha: 0.4),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Next',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Next',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Icon(
-                            Icons.arrow_forward_rounded,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ],
-                      ),
+                        SizedBox(width: 8),
+                        Icon(Icons.arrow_forward_rounded, size: 20),
+                      ],
                     ),
                   ),
                 ),
