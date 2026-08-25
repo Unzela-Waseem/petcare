@@ -259,7 +259,7 @@ class _SplashScreenState extends State<SplashScreen>
                     const SizedBox(height: 18),
                     // Big headline
                     Text(
-                      'Your pet\ndeserves\nthe best! 🐾',
+                      'Your pet\ndeserves\nthe best!',
                       style: Theme.of(context).textTheme.displayLarge?.copyWith(
                         fontSize: size.width < 380 ? 38 : 44,
                         height: 1.1,
@@ -332,7 +332,7 @@ class _SplashScreenState extends State<SplashScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Made with ❤️ for pet lovers',
+                          'Made with care for pet lovers',
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(
                                 fontWeight: FontWeight.w700,

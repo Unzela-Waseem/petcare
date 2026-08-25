@@ -446,6 +446,7 @@ class _OrangeCardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
     final fadeAnim = CurvedAnimation(
       parent: animController,
       curve: Curves.easeIn,
@@ -460,78 +461,48 @@ class _OrangeCardPage extends StatelessWidget {
       child: SlideTransition(
         position: slideAnim,
         child: Container(
-          color: const Color(0xFFFA8F3D),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // Exact reference design as background
-              Image.asset(
-                data.imagePath,
-                fit: BoxFit.cover,
-                alignment: Alignment.center,
-              ),
-              // Bottom clickable button matching 'Get Started'
-              Positioned(
-                bottom: 30,
-                left: 36,
-                right: 36,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(30),
-                    onTap: onComplete,
-                    child: Container(
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFA8F3D),
-                        borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(
-                              0xFFFA8F3D,
-                            ).withValues(alpha: 0.4),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
+          color: AppColors.cream,
+          alignment: Alignment.center,
+          padding: EdgeInsets.symmetric(
+            horizontal: size.width < 520 ? 10 : 28,
+            vertical: 12,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 440,
+              maxHeight: size.height - 24,
+            ),
+            child: AspectRatio(
+              aspectRatio: 182 / 378,
+              child: LayoutBuilder(
+                builder: (context, card) => ClipRRect(
+                  borderRadius: BorderRadius.circular(30),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.asset(data.imagePath, fit: BoxFit.fill),
+                      Positioned(
+                        left: card.maxWidth * (40 / 182),
+                        right: card.maxWidth * (40 / 182),
+                        bottom: card.maxHeight * (27 / 378),
+                        height: card.maxHeight * (30 / 378),
+                        child: Semantics(
+                          button: true,
+                          label: 'Get Started',
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(30),
+                              onTap: onComplete,
+                            ),
                           ),
-                        ],
+                        ),
                       ),
-                      child: Row(
-                        children: [
-                          const SizedBox(width: 8),
-                          Container(
-                            width: 42,
-                            height: 42,
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              color: Color(0xFFFA8F3D),
-                              size: 18,
-                            ),
-                          ),
-                          const Expanded(
-                            child: Center(
-                              child: Text(
-                                'Get Started',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 17,
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 50),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
