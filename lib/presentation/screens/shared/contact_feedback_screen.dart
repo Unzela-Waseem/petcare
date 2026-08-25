@@ -215,7 +215,7 @@ class _CommunityFormState extends State<_CommunityForm> {
           ),
           const SizedBox(height: 14),
           DropdownButtonFormField<String>(
-            initialValue: _shelter.id,
+            value: _shelter.id,
             decoration: const InputDecoration(labelText: 'Shelter'),
             items: widget.shelters
                 .map(
@@ -228,7 +228,7 @@ class _CommunityFormState extends State<_CommunityForm> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            initialValue: _kind,
+            value: _kind,
             decoration: const InputDecoration(labelText: 'Request type'),
             items: const [
               DropdownMenuItem(
@@ -338,7 +338,7 @@ class _FeedbackFormState extends State<_FeedbackForm> {
           ),
           const SizedBox(height: 14),
           DropdownButtonFormField<String>(
-            initialValue: _type,
+            value: _type,
             decoration: const InputDecoration(labelText: 'Type'),
             items: const [
               DropdownMenuItem(value: 'suggestion', child: Text('Suggestion')),

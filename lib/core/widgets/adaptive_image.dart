@@ -31,7 +31,7 @@ class AdaptiveImage extends StatelessWidget {
         height: height,
         fit: fit,
         alignment: alignment,
-        errorBuilder: (_, _, _) => fallback,
+        errorBuilder: (context, error, stackTrace) => fallback,
       );
     }
     return Image.network(
@@ -40,7 +40,7 @@ class AdaptiveImage extends StatelessWidget {
       height: height,
       fit: fit,
       alignment: alignment,
-      errorBuilder: (_, _, _) => fallback,
+      errorBuilder: (context, error, stackTrace) => fallback,
     );
   }
 }

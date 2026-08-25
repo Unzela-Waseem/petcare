@@ -83,7 +83,7 @@ class _PetsScreenState extends State<PetsScreen> {
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
                   itemCount: pets.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final pet = pets[index];
                     return _PetCard(
@@ -263,7 +263,7 @@ class _PetFormScreenState extends State<PetFormScreen> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              initialValue: _gender,
+              value: _gender,
               decoration: const InputDecoration(labelText: 'Gender'),
               items: const ['Female', 'Male', 'Unknown']
                   .map(

@@ -69,7 +69,7 @@ class _ModuleScreenState extends State<ModuleScreen> {
                     ? const Center(child: Text('No matching results.'))
                     : ListView.separated(
                         itemCount: items.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 12),
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
                         itemBuilder: (context, index) {
                           final item = items[index];
                           final colors = [

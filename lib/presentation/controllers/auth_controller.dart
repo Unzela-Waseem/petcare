@@ -34,15 +34,24 @@ class AuthController extends ChangeNotifier {
   bool busy = false;
 
   Future<void> initialize() async {
+    // Minimum splash screen display time (3 seconds)
+    final splashTimer = Future<void>.delayed(const Duration(seconds: 3));
     try {
       final onboardingComplete = await _sessionStore.hasCompletedOnboarding();
       if (!onboardingComplete) {
+        stage = AuthStage.initializing; // Keep splash while we wait
+        await splashTimer;
         stage = AuthStage.onboarding;
       } else {
-        user = await _authRepository.restoreSession();
+        final results = await Future.wait([
+          _authRepository.restoreSession().then((u) => u),
+          splashTimer,
+        ]);
+        user = results[0] as AppUser?;
         _routeForUser();
       }
     } on Object {
+      await splashTimer;
       user = null;
       message = 'We could not restore your session. Please sign in again.';
       stage = AuthStage.signedOut;

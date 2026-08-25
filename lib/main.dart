@@ -5,11 +5,11 @@ import 'package:flutter/material.dart';
 import 'app/pawfect_care_app.dart';
 import 'core/config/app_environment.dart';
 import 'core/config/app_services.dart';
-import 'data/services/cloudinary_media_storage_service.dart';
 import 'data/repositories/demo_auth_repository.dart';
 import 'data/repositories/demo_care_repository.dart';
 import 'data/repositories/firebase_auth_repository.dart';
 import 'data/repositories/firebase_care_repository.dart';
+import 'data/services/cloudinary_media_storage_service.dart';
 import 'data/services/firebase_media_storage_service.dart';
 import 'data/services/firebase_push_notification_service.dart';
 import 'data/services/hybrid_media_storage_service.dart';
@@ -30,22 +30,32 @@ Future<void> main() async {
   late final PushNotificationService pushNotifications;
   late final ReminderService reminders;
   late final AppServices services;
+
   if (AppEnvironment.usesFirebase) {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+
     if (AppEnvironment.usesFirebasePush) {
-      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      FirebaseMessaging.onBackgroundMessage(
+        firebaseMessagingBackgroundHandler,
+      );
     }
+
     authRepository = FirebaseAuthRepository();
+
     pushNotifications = AppEnvironment.usesFirebasePush
         ? FirebasePushNotificationService()
         : const NoopPushNotificationService();
-    reminders = AppEnvironment.usesFirebasePush
-        ? const NoopReminderService()
-        : LocalReminderService();
+
+    // Reminders are local notifications.
+    // They should work independently of Firebase Push Notifications.
+    reminders = LocalReminderService();
+
     await reminders.initialize();
+
     final localMedia = LocalMediaStorageService();
+
     services = AppServices(
       care: FirebaseCareRepository(),
       media: AppEnvironment.usesFirebaseStorage
@@ -64,13 +74,17 @@ Future<void> main() async {
     );
   } else {
     authRepository = DemoAuthRepository();
+
     pushNotifications = const NoopPushNotificationService();
+
     services = AppServices(
       care: DemoCareRepository(),
       media: const DemoMediaStorageService(),
       offlineArticles: SharedPreferencesOfflineArticleService(),
-      reminders: const NoopReminderService(),
+      reminders: LocalReminderService(),
     );
+
+    await services.reminders.initialize();
   }
 
   final controller = AuthController(
@@ -78,5 +92,11 @@ Future<void> main() async {
     sessionStore: const SecureSessionStore(),
     pushNotifications: pushNotifications,
   );
-  runApp(PawfectCareApp(authController: controller, services: services));
+
+  runApp(
+    PawfectCareApp(
+      authController: controller,
+      services: services,
+    ),
+  );
 }

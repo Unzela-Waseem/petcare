@@ -329,6 +329,10 @@ class BlogArticle {
     required this.content,
     required this.publishedAt,
     this.imageUrl,
+    this.authorId,
+    this.authorName,
+    this.tags = const <String>[],
+    this.published = true,
   });
 
   final String id;
@@ -338,6 +342,36 @@ class BlogArticle {
   final String content;
   final DateTime publishedAt;
   final String? imageUrl;
+  final String? authorId;
+  final String? authorName;
+  final List<String> tags;
+  final bool published;
+
+  BlogArticle copyWith({
+    String? id,
+    String? title,
+    String? category,
+    String? summary,
+    String? content,
+    DateTime? publishedAt,
+    String? imageUrl,
+    String? authorId,
+    String? authorName,
+    List<String>? tags,
+    bool? published,
+  }) => BlogArticle(
+    id: id ?? this.id,
+    title: title ?? this.title,
+    category: category ?? this.category,
+    summary: summary ?? this.summary,
+    content: content ?? this.content,
+    publishedAt: publishedAt ?? this.publishedAt,
+    imageUrl: imageUrl ?? this.imageUrl,
+    authorId: authorId ?? this.authorId,
+    authorName: authorName ?? this.authorName,
+    tags: tags ?? this.tags,
+    published: published ?? this.published,
+  );
 }
 
 class UserNotification {

@@ -65,7 +65,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
                 child: DropdownButtonFormField<String>(
-                  initialValue: selected.id,
+                  value: selected.id,
                   decoration: const InputDecoration(
                     labelText: 'Patient',
                     prefixIcon: Icon(Icons.pets_outlined),
@@ -115,7 +115,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   scrollDirection: Axis.horizontal,
                   itemCount: _HistoryFilter.values.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
                   itemBuilder: (context, index) {
                     final filter = _HistoryFilter.values[index];
                     return ChoiceChip(
@@ -255,7 +255,7 @@ class _Timeline extends StatelessWidget {
             return ListView.separated(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
               itemCount: entries.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final entry = entries[index];
                 return InkWell(

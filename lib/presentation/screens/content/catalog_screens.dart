@@ -6,6 +6,7 @@ import '../../../core/config/app_services.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/models/app_user.dart';
 import '../../../domain/models/care_models.dart';
+import '../../../domain/models/user_role.dart';
 import '../../../domain/repositories/care_repository.dart';
 
 class StoreScreen extends StatefulWidget {
@@ -156,14 +157,18 @@ class _CareTipsScreenState extends State<CareTipsScreen> {
   String? _category;
   bool _offlineOnly = false;
 
+  bool get _canManageBlogs =>
+      widget.user.role == UserRole.veterinarian ||
+      widget.user.role == UserRole.shelterAdmin;
+
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: AppColors.cream,
     appBar: AppBar(
-      title: const Text('Pet Care Tips'),
+      title: const Text('Pet Care Tips & Guides'),
       actions: [
         IconButton(
-          tooltip: 'Offline articles',
+          tooltip: _offlineOnly ? 'Show all tips' : 'Offline articles',
           onPressed: () => setState(() => _offlineOnly = !_offlineOnly),
           icon: Icon(
             _offlineOnly
@@ -171,8 +176,23 @@ class _CareTipsScreenState extends State<CareTipsScreen> {
                 : Icons.offline_pin_outlined,
           ),
         ),
+        if (_canManageBlogs)
+          IconButton(
+            tooltip: 'Write new tip',
+            onPressed: () => _openBlogEditor(context),
+            icon: const Icon(Icons.add_circle_outline_rounded),
+          ),
       ],
     ),
+    floatingActionButton: _canManageBlogs
+        ? FloatingActionButton.extended(
+            onPressed: () => _openBlogEditor(context),
+            backgroundColor: AppColors.orangeDeep,
+            foregroundColor: Colors.white,
+            icon: const Icon(Icons.edit_note_rounded),
+            label: const Text('Write Tip'),
+          )
+        : null,
     body: _offlineOnly
         ? FutureBuilder<List<BlogArticle>>(
             future: widget.services.offlineArticles.loadAll(),
@@ -214,68 +234,107 @@ class _CareTipsScreenState extends State<CareTipsScreen> {
     Set<String> bookmarks, {
     bool offline = false,
   }) {
-    final categories = articles.map((item) => item.category).toSet().toList()
-      ..sort();
+    const predefinedCategories = [
+      'All',
+      'Training',
+      'Nutrition',
+      'First Aid',
+      'Pet Care',
+      'Grooming',
+      'Health',
+    ];
+    final dynamicCategories =
+        articles.map((item) => item.category).toSet().toList()..sort();
+    final allCategories = {
+      ...predefinedCategories,
+      ...dynamicCategories,
+    }.toList();
+
     final query = _query.trim().toLowerCase();
-    final visible = articles
-        .where(
-          (item) =>
-              (_category == null || item.category == _category) &&
-              (item.title.toLowerCase().contains(query) ||
-                  item.summary.toLowerCase().contains(query) ||
-                  item.content.toLowerCase().contains(query)),
-        )
-        .toList();
+    final visible = articles.where((item) {
+      final matchesCategory = _category == null ||
+          _category == 'All' ||
+          item.category.toLowerCase() == _category!.toLowerCase();
+      final matchesQuery = query.isEmpty ||
+          item.title.toLowerCase().contains(query) ||
+          item.summary.toLowerCase().contains(query) ||
+          item.content.toLowerCase().contains(query) ||
+          item.tags.any((tag) => tag.toLowerCase().contains(query));
+      return matchesCategory && matchesQuery;
+    }).toList();
+
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
           child: TextField(
             onChanged: (value) => setState(() => _query = value),
-            decoration: const InputDecoration(
-              hintText: 'Search article keywords',
-              prefixIcon: Icon(Icons.search_rounded),
+            decoration: InputDecoration(
+              hintText: 'Search title, keyword, or tag (#nutrition, #firstaid)',
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon: _query.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded, size: 18),
+                      onPressed: () => setState(() => _query = ''),
+                    )
+                  : null,
             ),
           ),
         ),
         SizedBox(
           height: 46,
-          child: ListView(
+          child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             scrollDirection: Axis.horizontal,
-            children: [
-              ChoiceChip(
-                label: const Text('All'),
-                selected: _category == null,
-                onSelected: (_) => setState(() => _category = null),
-              ),
-              const SizedBox(width: 8),
-              ...categories.map(
-                (category) => Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(category),
-                    selected: _category == category,
-                    onSelected: (_) => setState(() => _category = category),
-                  ),
+            itemCount: allCategories.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, i) {
+              final cat = allCategories[i];
+              final isSelected =
+                  (_category == null && cat == 'All') || _category == cat;
+              return ChoiceChip(
+                label: Text(cat),
+                selected: isSelected,
+                onSelected: (_) => setState(
+                  () => _category = cat == 'All' ? null : cat,
                 ),
-              ),
-            ],
+              );
+            },
           ),
         ),
+        const SizedBox(height: 8),
         Expanded(
           child: visible.isEmpty
               ? Center(
-                  child: Text(
-                    offline
-                        ? 'No articles saved for offline reading.'
-                        : 'No matching articles.',
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.auto_stories_outlined,
+                          size: 48,
+                          color: AppColors.muted,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          offline
+                              ? 'No articles saved for offline reading.'
+                              : 'No matching care tips found.',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: AppColors.muted,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 )
               : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 80),
                   itemCount: visible.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final article = visible[index];
                     return _ArticleCard(
@@ -305,6 +364,19 @@ class _CareTipsScreenState extends State<CareTipsScreen> {
       ],
     );
   }
+
+  void _openBlogEditor(BuildContext context, [BlogArticle? initial]) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _BlogEditorSheet(
+        initial: initial,
+        user: widget.user,
+        services: widget.services,
+      ),
+    );
+  }
 }
 
 class ArticleScreen extends StatefulWidget {
@@ -324,11 +396,21 @@ class ArticleScreen extends StatefulWidget {
 
 class _ArticleScreenState extends State<ArticleScreen> {
   bool _offline = false;
+  late BlogArticle _currentArticle;
+
+  bool get _canEdit =>
+      widget.user.role == UserRole.shelterAdmin ||
+      (widget.user.role == UserRole.veterinarian &&
+          (widget.article.authorId == null ||
+              widget.article.authorId == widget.user.uid));
 
   @override
   void initState() {
     super.initState();
-    widget.services.offlineArticles.contains(widget.article.id).then((value) {
+    _currentArticle = widget.article;
+    widget.services.offlineArticles
+        .contains(_currentArticle.id)
+        .then((value) {
       if (mounted) setState(() => _offline = value);
     });
   }
@@ -340,6 +422,11 @@ class _ArticleScreenState extends State<ArticleScreen> {
       title: const Text('Care Guide'),
       actions: [
         IconButton(
+          tooltip: 'Share article',
+          onPressed: () => _shareArticle(context),
+          icon: const Icon(Icons.share_outlined),
+        ),
+        IconButton(
           tooltip: _offline ? 'Remove offline copy' : 'Save offline',
           onPressed: _toggleOffline,
           icon: Icon(
@@ -348,46 +435,170 @@ class _ArticleScreenState extends State<ArticleScreen> {
                 : Icons.download_for_offline_outlined,
           ),
         ),
+        if (_canEdit)
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert_rounded),
+            onSelected: (action) {
+              if (action == 'edit') {
+                _editArticle(context);
+              } else if (action == 'delete') {
+                _deleteArticle(context);
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit_outlined, size: 18),
+                    SizedBox(width: 10),
+                    Text('Edit Article'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_outline,
+                        color: AppColors.danger, size: 18),
+                    SizedBox(width: 10),
+                    Text(
+                      'Delete Article',
+                      style: TextStyle(color: AppColors.danger),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
       ],
     ),
     body: ListView(
-      padding: const EdgeInsets.fromLTRB(22, 12, 22, 32),
+      padding: const EdgeInsets.fromLTRB(22, 12, 22, 36),
       children: [
-        Text(
-          widget.article.category.toUpperCase(),
-          style: const TextStyle(
-            fontWeight: FontWeight.w900,
-            color: AppColors.orangeDeep,
-            letterSpacing: 1,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              decoration: BoxDecoration(
+                color: AppColors.peachLight,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                _currentArticle.category.toUpperCase(),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
+                  color: AppColors.orangeDeep,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ),
+            Text(
+              DateFormat.yMMMd().format(_currentArticle.publishedAt),
+              style: const TextStyle(color: AppColors.muted, fontSize: 13),
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Text(
-          widget.article.title,
+          _currentArticle.title,
           style: Theme.of(context).textTheme.headlineLarge,
         ),
-        const SizedBox(height: 8),
-        Text(DateFormat.yMMMd().format(widget.article.publishedAt)),
-        const SizedBox(height: 22),
-        Text(
-          widget.article.summary,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        if (_currentArticle.authorName != null &&
+            _currentArticle.authorName!.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(Icons.person_outline_rounded,
+                  size: 16, color: AppColors.muted),
+              const SizedBox(width: 6),
+              Text(
+                'By ${_currentArticle.authorName}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: AppColors.ink,
+                ),
+              ),
+            ],
+          ),
+        ],
+        if (_currentArticle.tags.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: _currentArticle.tags.map((tag) {
+              return Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.mint,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '#$tag',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.ink,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
         const SizedBox(height: 18),
-        Text(
-          widget.article.content,
-          style: const TextStyle(fontSize: 16, height: 1.6),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Text(
+            _currentArticle.summary,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  height: 1.4,
+                  fontStyle: FontStyle.italic,
+                ),
+          ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
+        Text(
+          _currentArticle.content,
+          style: const TextStyle(fontSize: 16, height: 1.65),
+        ),
+        const SizedBox(height: 26),
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: AppColors.yellow,
             borderRadius: BorderRadius.circular(20),
           ),
-          child: const Text(
-            'Educational content does not replace examination or treatment by a qualified veterinarian.',
+          child: const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.info_outline_rounded,
+                  color: AppColors.ink, size: 20),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Educational content does not replace examination or treatment by a qualified veterinarian.',
+                  style: TextStyle(fontSize: 13, height: 1.4),
+                ),
+              ),
+            ],
           ),
+        ),
+        const SizedBox(height: 24),
+        OutlinedButton.icon(
+          onPressed: () => _shareArticle(context),
+          icon: const Icon(Icons.share_outlined),
+          label: const Text('Share Article with Pet Parents'),
         ),
       ],
     ),
@@ -395,11 +606,380 @@ class _ArticleScreenState extends State<ArticleScreen> {
 
   Future<void> _toggleOffline() async {
     if (_offline) {
-      await widget.services.offlineArticles.remove(widget.article.id);
+      await widget.services.offlineArticles.remove(_currentArticle.id);
     } else {
-      await widget.services.offlineArticles.save(widget.article);
+      await widget.services.offlineArticles.save(_currentArticle);
     }
-    if (mounted) setState(() => _offline = !_offline);
+    if (!mounted) return;
+    setState(() => _offline = !_offline);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _offline
+              ? 'Saved to offline library! 📥'
+              : 'Removed from offline library.',
+        ),
+      ),
+    );
+  }
+
+  void _shareArticle(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 30),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Share "${_currentArticle.title}"',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: AppColors.mint,
+                child: Icon(Icons.chat_bubble_outline, color: AppColors.ink),
+              ),
+              title: const Text('Share via WhatsApp'),
+              subtitle: const Text('Send article summary & advice to a friend'),
+              onTap: () async {
+                Navigator.of(context).pop();
+                final text =
+                    '🐾 *${_currentArticle.title}*\n\n${_currentArticle.summary}\n\nRead more on PawfectCare!';
+                final url = Uri.parse(
+                    'https://wa.me/?text=${Uri.encodeComponent(text)}');
+                if (await canLaunchUrl(url)) {
+                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                }
+              },
+            ),
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: AppColors.lavender,
+                child: Icon(Icons.email_outlined, color: AppColors.ink),
+              ),
+              title: const Text('Share via Email'),
+              subtitle: const Text('Email article to your family or client'),
+              onTap: () async {
+                Navigator.of(context).pop();
+                final uri = Uri(
+                  scheme: 'mailto',
+                  queryParameters: {
+                    'subject': '🐾 PawfectCare: ${_currentArticle.title}',
+                    'body':
+                        '${_currentArticle.title}\n\n${_currentArticle.summary}\n\n${_currentArticle.content}',
+                  },
+                );
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri);
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _editArticle(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _BlogEditorSheet(
+        initial: _currentArticle,
+        user: widget.user,
+        services: widget.services,
+        onSaved: (saved) => setState(() => _currentArticle = saved),
+      ),
+    );
+  }
+
+  Future<void> _deleteArticle(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Care Tip?'),
+        content: const Text(
+          'This article will be removed for all users.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    await widget.services.care.deleteBlogArticle(_currentArticle.id);
+    navigator.pop();
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Article deleted successfully.')),
+    );
+  }
+}
+
+class _BlogEditorSheet extends StatefulWidget {
+  const _BlogEditorSheet({
+    required this.user,
+    required this.services,
+    this.initial,
+    this.onSaved,
+  });
+
+  final AppUser user;
+  final AppServices services;
+  final BlogArticle? initial;
+  final ValueChanged<BlogArticle>? onSaved;
+
+  @override
+  State<_BlogEditorSheet> createState() => _BlogEditorSheetState();
+}
+
+class _BlogEditorSheetState extends State<_BlogEditorSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _titleController;
+  late final TextEditingController _summaryController;
+  late final TextEditingController _contentController;
+  late final TextEditingController _tagsController;
+  late String _category;
+  bool _published = true;
+  bool _saving = false;
+
+  static const _categories = [
+    'Training',
+    'Nutrition',
+    'First Aid',
+    'Pet Care',
+    'Grooming',
+    'Health',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    final init = widget.initial;
+    _titleController = TextEditingController(text: init?.title ?? '');
+    _summaryController = TextEditingController(text: init?.summary ?? '');
+    _contentController = TextEditingController(text: init?.content ?? '');
+    _tagsController = TextEditingController(
+      text: init?.tags.join(', ') ?? '',
+    );
+    _category = init?.category ?? 'Pet Care';
+    _published = init?.published ?? true;
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _summaryController.dispose();
+    _contentController.dispose();
+    _tagsController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Container(
+      padding: EdgeInsets.fromLTRB(24, 20, 24, 20 + bottomInset),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.88,
+      ),
+      decoration: const BoxDecoration(
+        color: AppColors.cream,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      child: Form(
+        key: _formKey,
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            Center(
+              child: Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              widget.initial == null
+                  ? 'Write Pet Care Tip 📝'
+                  : 'Edit Care Tip 📝',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            const SizedBox(height: 18),
+            TextFormField(
+              controller: _titleController,
+              decoration: const InputDecoration(
+                labelText: 'Article Title',
+                hintText: 'e.g. Caring for Puppies During Monsoon',
+              ),
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Title is required' : null,
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: _category,
+              decoration: const InputDecoration(labelText: 'Category'),
+              items: _categories
+                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                  .toList(),
+              onChanged: (val) => setState(() => _category = val ?? 'Pet Care'),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _tagsController,
+              decoration: const InputDecoration(
+                labelText: 'Tags (comma-separated)',
+                hintText: 'e.g. puppies, diet, emergency',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _summaryController,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                labelText: 'Short Summary',
+                hintText: 'One or two sentences highlighting main point.',
+              ),
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Summary is required' : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _contentController,
+              maxLines: 6,
+              decoration: const InputDecoration(
+                labelText: 'Full Content & Advice',
+                hintText: 'Detailed veterinary or shelter guidance...',
+              ),
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Content is required' : null,
+            ),
+            const SizedBox(height: 12),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Published immediately'),
+              subtitle: const Text('Toggle off to save as draft/archive'),
+              value: _published,
+              activeColor: AppColors.orangeDeep,
+              onChanged: (v) => setState(() => _published = v),
+            ),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: _saving ? null : _save,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.ink,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+              child: _saving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      widget.initial == null
+                          ? 'Publish Care Tip'
+                          : 'Save Changes',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _saving = true);
+    try {
+      final tags = _tagsController.text
+          .split(',')
+          .map((t) => t.trim())
+          .where((t) => t.isNotEmpty)
+          .toList();
+
+      final article = BlogArticle(
+        id: widget.initial?.id ?? '',
+        title: _titleController.text.trim(),
+        category: _category,
+        summary: _summaryController.text.trim(),
+        content: _contentController.text.trim(),
+        publishedAt: widget.initial?.publishedAt ?? DateTime.now(),
+        authorId: widget.user.uid,
+        authorName: widget.user.name.isEmpty
+            ? (widget.user.role == UserRole.veterinarian
+                ? 'Dr. Veterinarian'
+                : 'Shelter Team')
+            : widget.user.name,
+        tags: tags,
+        published: _published,
+      );
+
+      final id = await widget.services.care.saveBlogArticle(article);
+      final savedArticle = article.copyWith(id: id);
+      widget.onSaved?.call(savedArticle);
+
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              widget.initial == null
+                  ? 'Care tip published! 🐾'
+                  : 'Care tip updated! ✨',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save article: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 }
 
@@ -436,7 +1016,7 @@ class _ProductCard extends StatelessWidget {
                         product.imageUrl!,
                         height: 100,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) =>
+                        errorBuilder: (context, error, stackTrace) =>
                             const _ProductImageFallback(),
                       )
                     : const _ProductImageFallback(),

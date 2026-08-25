@@ -111,6 +111,14 @@ class FirebaseCareRepository implements CareRepository {
       data['createdAt'] = FieldValue.serverTimestamp();
     }
     await reference.set(data, SetOptions(merge: true));
+    if (record.dueDate != null) {
+      await _sendNotification(
+        recipientId: actor.uid,
+        title: '${record.type.label} Reminder Set',
+        body: 'Reminder set for ${record.title} (Due: ${record.dueDate!.day}/${record.dueDate!.month}/${record.dueDate!.year}).',
+        type: 'vaccination',
+      );
+    }
     return reference.id;
   });
 
@@ -262,6 +270,18 @@ class FirebaseCareRepository implements CareRepository {
       }
       transaction.set(accessRef, accessData, SetOptions(merge: true));
     });
+    await _sendNotification(
+      recipientId: owner.uid,
+      title: 'Appointment Booked',
+      body: 'Your appointment for ${pet.name} with ${veterinarian.name} is booked.',
+      type: 'appointment',
+    );
+    await _sendNotification(
+      recipientId: veterinarian.uid,
+      title: 'New Appointment Booking',
+      body: '${owner.name} booked an appointment for ${pet.name} on ${slot.start.day}/${slot.start.month} at ${slot.start.hour}:${slot.start.minute.toString().padLeft(2, '0')}.',
+      type: 'appointment',
+    );
     return appointmentRef.id;
   });
 
@@ -758,6 +778,10 @@ class FirebaseCareRepository implements CareRepository {
       .map((snapshot) {
         final articles = snapshot.docs.map((doc) {
           final data = doc.data();
+          final rawTags = data['tags'];
+          final tags = rawTags is List
+              ? rawTags.map((item) => item.toString()).toList()
+              : const <String>[];
           return BlogArticle(
             id: doc.id,
             title: data['title'] as String? ?? '',
@@ -766,11 +790,41 @@ class FirebaseCareRepository implements CareRepository {
             content: data['content'] as String? ?? '',
             publishedAt: _date(data['publishedAt']),
             imageUrl: data['imageUrl'] as String?,
+            authorId: data['authorId'] as String?,
+            authorName: data['authorName'] as String?,
+            tags: tags,
+            published: data['published'] as bool? ?? true,
           );
         }).toList();
         articles.sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
         return articles;
       });
+
+  @override
+  Future<String> saveBlogArticle(BlogArticle article) => _safe(() async {
+    final reference = article.id.isEmpty
+        ? _db.collection('blogs').doc()
+        : _db.collection('blogs').doc(article.id);
+    await reference.set({
+      'title': article.title,
+      'category': article.category,
+      'summary': article.summary,
+      'content': article.content,
+      'publishedAt': Timestamp.fromDate(article.publishedAt),
+      'imageUrl': article.imageUrl,
+      'authorId': article.authorId,
+      'authorName': article.authorName,
+      'tags': article.tags,
+      'published': article.published,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    return reference.id;
+  });
+
+  @override
+  Future<void> deleteBlogArticle(String blogId) => _safe(() async {
+    await _db.collection('blogs').doc(blogId).delete();
+  });
 
   @override
   Stream<Set<String>> watchBookmarks(String uid) => _db
@@ -1073,4 +1127,28 @@ class FirebaseCareRepository implements CareRepository {
     'already-exists' => 'That record already exists.',
     _ => 'The request could not be completed securely.',
   };
+
+  Future<void> _sendNotification({
+    required String recipientId,
+    required String title,
+    required String body,
+    required String type,
+  }) async {
+    try {
+      final docRef = _db
+          .collection('notifications')
+          .doc(recipientId)
+          .collection('items')
+          .doc();
+      await docRef.set({
+        'title': title,
+        'body': body,
+        'type': type,
+        'createdAt': FieldValue.serverTimestamp(),
+        'readAt': null,
+      });
+    } on Object {
+      // Background notifications failure should not break primary operation
+    }
+  }
 }

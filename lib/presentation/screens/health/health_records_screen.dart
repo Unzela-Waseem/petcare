@@ -81,7 +81,7 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
                 child: DropdownButtonFormField<String>(
-                  initialValue: selected.id,
+                  value: selected.id,
                   decoration: const InputDecoration(
                     labelText: 'Pet',
                     prefixIcon: Icon(Icons.pets_outlined),
@@ -172,7 +172,7 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> {
                     return ListView.separated(
                       padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
                       itemCount: records.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final record = records[index];
                         return _RecordCard(
@@ -441,7 +441,7 @@ class _HealthRecordFormScreenState extends State<HealthRecordFormScreen> {
             ),
             const SizedBox(height: 14),
             DropdownButtonFormField<HealthRecordType>(
-              initialValue: _type,
+              value: _type,
               decoration: InputDecoration(
                 labelText: 'Record type',
                 helperText: _isVet

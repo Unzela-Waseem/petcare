@@ -155,7 +155,7 @@ class _AdoptionListingsScreenState extends State<AdoptionListingsScreen> {
             return ListView.separated(
               padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
               itemCount: listings.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final listing = listings[index];
                 return _ListingCard(
@@ -439,7 +439,7 @@ class _AdoptionListingFormScreenState extends State<AdoptionListingFormScreen> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            initialValue: _gender,
+            value: _gender,
             decoration: const InputDecoration(labelText: 'Gender'),
             items: const ['Female', 'Male', 'Unknown']
                 .map(
@@ -464,7 +464,7 @@ class _AdoptionListingFormScreenState extends State<AdoptionListingFormScreen> {
           ),
           const SizedBox(height: 4),
           DropdownButtonFormField<AdoptionStatus>(
-            initialValue: _status,
+            value: _status,
             decoration: const InputDecoration(labelText: 'Adoption status'),
             items: AdoptionStatus.values
                 .map(
@@ -628,7 +628,7 @@ class AdoptionRequestsScreen extends StatelessWidget {
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 30),
             itemCount: requests.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final request = requests[index];
               return Container(

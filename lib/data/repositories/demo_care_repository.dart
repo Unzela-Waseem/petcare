@@ -73,6 +73,8 @@ class DemoCareRepository implements CareRepository {
           content:
               'Practice short carrier or car sessions, reward calm behavior, and bring familiar treats. Share behavior concerns with the clinic before arrival.',
           publishedAt: DateTime(2026, 8, 12),
+          authorName: 'Dr. Maya Chen (DVM)',
+          tags: const ['Training', 'Behavior', 'Clinic Visit'],
         ),
         BlogArticle(
           id: 'first-aid',
@@ -82,6 +84,8 @@ class DemoCareRepository implements CareRepository {
           content:
               'Keep gauze, saline, gloves, a digital thermometer, emergency contacts, and current medication details together. First aid never replaces veterinary care.',
           publishedAt: DateTime(2026, 8, 10),
+          authorName: 'Dr. Marcus Vance (BVSc)',
+          tags: const ['First Aid', 'Emergency', 'Safety'],
         ),
         BlogArticle(
           id: 'nutrition-basics',
@@ -91,6 +95,8 @@ class DemoCareRepository implements CareRepository {
           content:
               'Choose food formulated for your pet’s species and life stage, measure portions, provide fresh water, and discuss weight changes with a veterinarian.',
           publishedAt: DateTime(2026, 8, 8),
+          authorName: 'Dr. Maya Chen (DVM)',
+          tags: const ['Nutrition', 'Diet', 'Wellness'],
         ),
         BlogArticle(
           id: 'daily-care',
@@ -100,6 +106,8 @@ class DemoCareRepository implements CareRepository {
           content:
               'Check appetite, water intake, energy, toileting, coat, eyes, and mobility. Record meaningful changes and seek veterinary advice when symptoms persist.',
           publishedAt: DateTime(2026, 8, 6),
+          authorName: 'PawfectCare Editorial',
+          tags: const ['Pet Care', 'Checklist', 'Health'],
         ),
       ] {
     final start = DateTime.now().add(const Duration(days: 2));
@@ -121,6 +129,8 @@ class DemoCareRepository implements CareRepository {
   final List<CommunityRequest> _communityRequests = [];
   final List<SuccessStory> _successStories = [];
   final StreamController<void> _successStoryChanges =
+      StreamController<void>.broadcast();
+  final StreamController<void> _blogChanges =
       StreamController<void>.broadcast();
   final List<ProductItem> _products;
   final List<BlogArticle> _blogs;
@@ -149,32 +159,77 @@ class DemoCareRepository implements CareRepository {
   Future<void> deletePet(Pet pet) async =>
       _pets.removeWhere((item) => item.id == pet.id);
 
+  final Map<String, List<HealthRecord>> _healthRecordsStore = {};
+
   @override
-  Stream<List<HealthRecord>> watchHealthRecords(String petId) => Stream.value([
-    HealthRecord(
-      id: 'demo-health',
-      petId: petId,
-      type: HealthRecordType.vaccination,
-      title: 'Rabies vaccination',
-      date: DateTime(2025, 11, 4),
-      dueDate: DateTime(2026, 11, 4),
-      notes: 'Annual booster reminder.',
-    ),
-  ]);
+  Stream<List<HealthRecord>> watchHealthRecords(String petId) {
+    if (!_healthRecordsStore.containsKey(petId)) {
+      _healthRecordsStore[petId] = [
+        HealthRecord(
+          id: 'demo-health-$petId',
+          petId: petId,
+          type: HealthRecordType.vaccination,
+          title: 'Rabies vaccination',
+          date: DateTime.now().subtract(const Duration(days: 30)),
+          dueDate: DateTime.now().add(const Duration(days: 5)),
+          notes: 'Annual booster reminder.',
+        ),
+      ];
+    }
+    return Stream.value(_healthRecordsStore[petId]!);
+  }
 
   @override
   Future<String> saveHealthRecord({
     required AppUser actor,
     required HealthRecord record,
-  }) async => record.id.isEmpty
-      ? 'demo-health-${DateTime.now().microsecondsSinceEpoch}'
-      : record.id;
+  }) async {
+    final petId = record.petId;
+    final records = _healthRecordsStore[petId] ?? [];
+    final id = record.id.isEmpty
+        ? 'demo-health-${DateTime.now().microsecondsSinceEpoch}'
+        : record.id;
+    final updatedRecord = HealthRecord(
+      id: id,
+      petId: record.petId,
+      type: record.type,
+      title: record.title,
+      date: record.date,
+      veterinarianId: record.veterinarianId,
+      diagnosis: record.diagnosis,
+      treatment: record.treatment,
+      prescription: record.prescription,
+      dueDate: record.dueDate,
+      followUpDate: record.followUpDate,
+      notes: record.notes,
+      reportPaths: record.reportPaths,
+    );
+    final index = records.indexWhere((r) => r.id == id);
+    if (index >= 0) {
+      records[index] = updatedRecord;
+    } else {
+      records.add(updatedRecord);
+    }
+    _healthRecordsStore[petId] = records;
+
+    if (record.dueDate != null) {
+      _addNotification(
+        title: '${record.type.label} Reminder Set',
+        body: 'Reminder set for ${record.title} (Due: ${record.dueDate!.day}/${record.dueDate!.month}/${record.dueDate!.year}).',
+        type: 'vaccination',
+        targetUserId: actor.uid,
+      );
+    }
+    return id;
+  }
 
   @override
   Future<void> deleteHealthRecord({
     required AppUser actor,
     required HealthRecord record,
-  }) async {}
+  }) async {
+    _healthRecordsStore[record.petId]?.removeWhere((r) => r.id == record.id);
+  }
 
   @override
   Stream<List<VeterinarianProfile>> watchVeterinarians() => Stream.value(const [
@@ -265,6 +320,18 @@ class DemoCareRepository implements CareRepository {
         status: AppointmentStatus.pending,
       ),
     );
+    _addNotification(
+      title: 'Appointment Booked',
+      body: 'Your appointment for ${pet.name} with ${veterinarian.name} is booked.',
+      type: 'appointment',
+      targetUserId: owner.uid,
+    );
+    _addNotification(
+      title: 'New Appointment Booking',
+      body: '${owner.name} booked an appointment for ${pet.name} on ${slot.start.day}/${slot.start.month} at ${slot.start.hour}:${slot.start.minute.toString().padLeft(2, '0')}.',
+      type: 'appointment',
+      targetUserId: veterinarian.uid,
+    );
     return slot.id;
   }
 
@@ -304,6 +371,12 @@ class DemoCareRepository implements CareRepository {
         status: AppointmentStatus.pending,
       ),
     );
+    _addNotification(
+      title: 'Appointment Rescheduled',
+      body: 'Appointment for ${appointment.petName} has been rescheduled to ${newSlot.start.day}/${newSlot.start.month} at ${newSlot.start.hour}:${newSlot.start.minute.toString().padLeft(2, '0')}.',
+      type: 'appointment',
+      targetUserId: appointment.ownerId,
+    );
     return newSlot.id;
   }
 
@@ -325,6 +398,18 @@ class DemoCareRepository implements CareRepository {
       dateTime: appointment.dateTime,
       reason: appointment.reason,
       status: status,
+    );
+    _addNotification(
+      title: 'Appointment ${status.label}',
+      body: 'Your appointment for ${appointment.petName} with ${appointment.veterinarianName} has been ${status.label.toLowerCase()}.',
+      type: 'appointment',
+      targetUserId: appointment.ownerId,
+    );
+    _addNotification(
+      title: 'Appointment ${status.label}',
+      body: 'Appointment for ${appointment.petName} has been marked as ${status.label.toLowerCase()}.',
+      type: 'appointment',
+      targetUserId: appointment.veterinarianId,
     );
     if (status == AppointmentStatus.cancelled) {
       final slotIndex = _slots.indexWhere(
@@ -427,17 +512,31 @@ class DemoCareRepository implements CareRepository {
         createdAt: DateTime.now(),
       ),
     );
+    _addNotification(
+      title: 'Adoption Application Sent',
+      body: 'Your application to adopt ${listing.petName} has been submitted to the shelter.',
+      type: 'adoption',
+      targetUserId: owner.uid,
+    );
+    _addNotification(
+      title: 'New Adoption Application',
+      body: '${owner.name} submitted an application to adopt ${listing.petName}.',
+      type: 'adoption',
+      targetUserId: listing.adminId,
+    );
     return id;
   }
 
-  @override
+   @override
   Future<void> updateAdoptionRequest({
     required AdoptionRequest request,
     required RequestStatus status,
   }) async {
     final index = _adoptionRequests.indexWhere((item) => item.id == request.id);
     if (index < 0) return;
+
     _adoptionRequests[index] = _requestWithStatus(request, status);
+
     if (status == RequestStatus.approved) {
       for (var i = 0; i < _adoptionRequests.length; i++) {
         final item = _adoptionRequests[i];
@@ -451,24 +550,32 @@ class DemoCareRepository implements CareRepository {
         }
       }
     }
+
+    _addNotification(
+      title: 'Adoption Application Update',
+      body:
+          'Your application for ${request.petName} has been ${status.label.toLowerCase()}.',
+      type: 'adoption',
+      targetUserId: request.ownerId,
+    );
   }
 
   AdoptionRequest _requestWithStatus(
     AdoptionRequest request,
     RequestStatus status,
-  ) => AdoptionRequest(
-    id: request.id,
-    listingId: request.listingId,
-    petName: request.petName,
-    ownerId: request.ownerId,
-    ownerName: request.ownerName,
-    shelterId: request.shelterId,
-    shelterAdminId: request.shelterAdminId,
-    status: status,
-    message: request.message,
-    createdAt: request.createdAt,
-  );
-
+  ) =>
+      AdoptionRequest(
+        id: request.id,
+        listingId: request.listingId,
+        petName: request.petName,
+        ownerId: request.ownerId,
+        ownerName: request.ownerName,
+        shelterId: request.shelterId,
+        shelterAdminId: request.shelterAdminId,
+        status: status,
+        message: request.message,
+        createdAt: request.createdAt,
+      );
   @override
   Stream<List<SuccessStory>> watchSuccessStories({String? shelterId}) async* {
     yield _visibleStories(shelterId);
@@ -603,7 +710,34 @@ class DemoCareRepository implements CareRepository {
   }) async => saved ? _wishlist.add(productId) : _wishlist.remove(productId);
 
   @override
-  Stream<List<BlogArticle>> watchBlogs() => Stream.value(_blogs);
+  Stream<List<BlogArticle>> watchBlogs() async* {
+    yield List<BlogArticle>.from(_blogs);
+    await for (final _ in _blogChanges.stream) {
+      yield List<BlogArticle>.from(_blogs);
+    }
+  }
+
+  @override
+  Future<String> saveBlogArticle(BlogArticle article) async {
+    final id = article.id.isEmpty
+        ? 'demo-blog-${DateTime.now().microsecondsSinceEpoch}'
+        : article.id;
+    final updated = article.copyWith(id: id);
+    final index = _blogs.indexWhere((item) => item.id == id);
+    if (index >= 0) {
+      _blogs[index] = updated;
+    } else {
+      _blogs.insert(0, updated);
+    }
+    _blogChanges.add(null);
+    return id;
+  }
+
+  @override
+  Future<void> deleteBlogArticle(String blogId) async {
+    _blogs.removeWhere((item) => item.id == blogId);
+    _blogChanges.add(null);
+  }
 
   @override
   Stream<Set<String>> watchBookmarks(String uid) => Stream.value(_bookmarks);
@@ -615,15 +749,87 @@ class DemoCareRepository implements CareRepository {
     required bool saved,
   }) async => saved ? _bookmarks.add(blogId) : _bookmarks.remove(blogId);
 
+  final List<UserNotification> _notifications = [
+    UserNotification(
+      id: 'welcome-notif',
+      title: 'Welcome to PawfectCare',
+      body: 'Keep track of your pets, vaccinations, and vet appointments all in one place!',
+      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+      type: 'general',
+      resourceId: 'demo-owner',
+    ),
+    UserNotification(
+      id: 'welcome-notif-vet',
+      title: 'Welcome Dr. Maya Chen',
+      body: 'You have active appointment slots and assigned pets ready.',
+      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+      type: 'general',
+      resourceId: 'demo-veterinarian',
+    ),
+  ];
+  final _notificationsController = StreamController<List<UserNotification>>.broadcast();
+
   @override
-  Stream<List<UserNotification>> watchNotifications(String uid) =>
-      Stream.value(const []);
+  Stream<List<UserNotification>> watchNotifications(String uid) async* {
+    List<UserNotification> getForUser(String userId) => _notifications
+        .where(
+          (n) =>
+              n.resourceId == null ||
+              n.resourceId == userId ||
+              userId.contains(n.resourceId!) ||
+              n.resourceId!.contains(userId) ||
+              userId.startsWith('demo-') ||
+              n.resourceId == 'demo-owner' ||
+              n.resourceId == 'demo-veterinarian',
+        )
+        .toList()
+        .reversed
+        .toList();
+
+    yield getForUser(uid);
+    await for (final _ in _notificationsController.stream) {
+      yield getForUser(uid);
+    }
+  }
+
+  void _addNotification({
+    required String title,
+    required String body,
+    required String type,
+    String? targetUserId,
+  }) {
+    _notifications.add(
+      UserNotification(
+        id: 'notif-${DateTime.now().microsecondsSinceEpoch}',
+        title: title,
+        body: body,
+        createdAt: DateTime.now(),
+        type: type,
+        resourceId: targetUserId,
+      ),
+    );
+    _notificationsController.add(_notifications);
+  }
 
   @override
   Future<void> markNotificationRead({
     required String uid,
     required String notificationId,
-  }) async {}
+  }) async {
+    final index = _notifications.indexWhere((n) => n.id == notificationId);
+    if (index != -1) {
+      final old = _notifications[index];
+      _notifications[index] = UserNotification(
+        id: old.id,
+        title: old.title,
+        body: old.body,
+        createdAt: old.createdAt,
+        readAt: DateTime.now(),
+        type: old.type,
+      );
+      _notificationsController.add(_notifications.reversed.toList());
+    }
+  }
 
   @override
   Future<String> submitFeedback({

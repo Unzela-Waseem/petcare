@@ -84,6 +84,8 @@ abstract interface class CareRepository {
     required bool saved,
   });
   Stream<List<BlogArticle>> watchBlogs();
+  Future<String> saveBlogArticle(BlogArticle article);
+  Future<void> deleteBlogArticle(String blogId);
   Stream<Set<String>> watchBookmarks(String uid);
   Future<void> setBookmark({
     required String uid,

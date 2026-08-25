@@ -41,6 +41,10 @@ class SharedPreferencesOfflineArticleService implements OfflineArticleService {
       'content': article.content,
       'publishedAt': article.publishedAt.toIso8601String(),
       'imageUrl': article.imageUrl,
+      'authorId': article.authorId,
+      'authorName': article.authorName,
+      'tags': article.tags,
+      'published': article.published,
     });
     await _write(values);
   }
@@ -66,6 +70,10 @@ class SharedPreferencesOfflineArticleService implements OfflineArticleService {
   BlogArticle? _decode(String value) {
     try {
       final data = jsonDecode(value) as Map<String, dynamic>;
+      final rawTags = data['tags'];
+      final tags = rawTags is List
+          ? rawTags.map((item) => item.toString()).toList()
+          : const <String>[];
       return BlogArticle(
         id: data['id'] as String,
         title: data['title'] as String,
@@ -74,6 +82,10 @@ class SharedPreferencesOfflineArticleService implements OfflineArticleService {
         content: data['content'] as String,
         publishedAt: DateTime.parse(data['publishedAt'] as String),
         imageUrl: data['imageUrl'] as String?,
+        authorId: data['authorId'] as String?,
+        authorName: data['authorName'] as String?,
+        tags: tags,
+        published: data['published'] as bool? ?? true,
       );
     } on Object {
       return null;

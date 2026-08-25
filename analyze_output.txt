@@ -1,0 +1,6 @@
+Analyzing petcare...                                            
+
+   info - 'scale' is deprecated and shouldn't be used. Use scaleByVector3, scaleByVector4, or scaleByDouble instead. Try replacing the use of the deprecated member with the replacement - lib\presentation\screens\onboarding\onboarding_screen.dart:207:29 - deprecated_member_use
+   info - 'translate' is deprecated and shouldn't be used. Use translateByVector3, translateByVector4, or translateByDouble instead. Try replacing the use of the deprecated member with the replacement - lib\presentation\screens\onboarding\onboarding_screen.dart:208:29 - deprecated_member_use
+
+2 issues found. (ran in 62.9s)

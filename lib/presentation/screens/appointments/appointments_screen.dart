@@ -54,7 +54,7 @@ class AppointmentsScreen extends StatelessWidget {
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
             itemCount: appointments.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) => _AppointmentCard(
               appointment: appointments[index],
               user: user,
@@ -255,7 +255,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 10, 20, 28),
                 children: [
                   DropdownButtonFormField<String>(
-                    initialValue: selectedPet.id,
+                    value: selectedPet.id,
                     decoration: const InputDecoration(labelText: 'Pet'),
                     items: pets
                         .map(
@@ -295,7 +295,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                     const SizedBox(height: 12),
                   ],
                   DropdownButtonFormField<String>(
-                    initialValue: selectedVet.uid,
+                    value: selectedVet.uid,
                     decoration: const InputDecoration(
                       labelText: 'Veterinarian',
                     ),
@@ -603,7 +603,7 @@ class AvailabilityScreen extends StatelessWidget {
         return ListView.separated(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
           itemCount: slots.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 10),
+          separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (context, index) {
             final slot = slots[index];
             return ListTile(
@@ -688,7 +688,7 @@ class _AvailabilityFormState extends State<_AvailabilityForm> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<int>(
-            initialValue: _minutes,
+            value: _minutes,
             decoration: const InputDecoration(labelText: 'Duration'),
             items: const [20, 30, 45, 60]
                 .map(

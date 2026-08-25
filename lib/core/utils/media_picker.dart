@@ -36,12 +36,15 @@ abstract final class MediaPicker {
   }
 
   static Future<PickedMedia?> medicalDocument() async {
-    final file = await FilePicker.pickFile(
+    final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
+      withData: true,
     );
-    if (file == null) return null;
-    final bytes = await file.readAsBytes();
+    if (result == null || result.files.isEmpty) return null;
+    final file = result.files.single;
+    final bytes = file.bytes;
+    if (bytes == null) return null;
     if (bytes.lengthInBytes >= 10 * 1024 * 1024) {
       throw const FormatException('Medical files must be smaller than 10 MB.');
     }
