@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:image_picker/image_picker.dart';
 
 class PickedMedia {
   const PickedMedia({
@@ -17,17 +16,16 @@ class PickedMedia {
 
 abstract final class MediaPicker {
   static Future<PickedMedia?> image() async {
-    final image = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1800,
-      imageQuality: 88,
+    final image = await FilePicker.pickFile(
+      type: FileType.custom,
+      allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
     );
     if (image == null) return null;
     final bytes = await image.readAsBytes();
     if (bytes.lengthInBytes >= 5 * 1024 * 1024) {
       throw const FormatException('Images must be smaller than 5 MB.');
     }
-    final contentType = _imageType(image.name, image.mimeType);
+    final contentType = _imageType(image.name);
     return PickedMedia(
       name: _safeName(image.name),
       bytes: bytes,
@@ -62,12 +60,7 @@ abstract final class MediaPicker {
     );
   }
 
-  static String _imageType(String name, String? supplied) {
-    if (supplied == 'image/jpeg' ||
-        supplied == 'image/png' ||
-        supplied == 'image/webp') {
-      return supplied!;
-    }
+  static String _imageType(String name) {
     final extension = name.split('.').last.toLowerCase();
     return switch (extension) {
       'jpg' || 'jpeg' => 'image/jpeg',
