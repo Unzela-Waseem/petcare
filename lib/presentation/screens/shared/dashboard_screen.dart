@@ -4,6 +4,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/config/app_services.dart';
 import '../../../core/widgets/section_heading.dart';
 import '../../../domain/models/app_user.dart';
+import '../../../domain/models/care_models.dart';
 import '../../../domain/models/user_role.dart';
 import 'feature_catalog.dart';
 import 'feature_router.dart';
@@ -43,6 +44,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 _Header(
                   user: widget.user,
+                  services: widget.services,
                   onNotifications: () => _openFeature(
                     context,
                     FeatureCatalog.forRole(
@@ -133,8 +135,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.user, required this.onNotifications});
+  const _Header({
+    required this.user,
+    required this.services,
+    required this.onNotifications,
+  });
   final AppUser user;
+  final AppServices services;
   final VoidCallback onNotifications;
 
   @override
@@ -169,19 +176,27 @@ class _Header extends StatelessWidget {
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
           ),
         ),
-        const SizedBox(width: 9),
-        Badge(
-          smallSize: 9,
-          backgroundColor: AppColors.orangeDeep,
-          child: IconButton.filledTonal(
-            tooltip: 'Notifications',
-            style: IconButton.styleFrom(
-              backgroundColor: AppColors.surface,
-              foregroundColor: AppColors.ink,
-            ),
-            onPressed: onNotifications,
-            icon: const Icon(Icons.notifications_none_rounded),
-          ),
+        StreamBuilder<List<UserNotification>>(
+          stream: services.care.watchNotifications(user.uid),
+          builder: (context, snapshot) {
+            final unreadCount = snapshot.hasData
+                ? snapshot.data!.where((n) => n.readAt == null).length
+                : 0;
+            return Badge(
+              isLabelVisible: unreadCount > 0,
+              label: Text('$unreadCount'),
+              backgroundColor: AppColors.orangeDeep,
+              child: IconButton.filledTonal(
+                tooltip: 'Notifications',
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.surface,
+                  foregroundColor: AppColors.ink,
+                ),
+                onPressed: onNotifications,
+                icon: const Icon(Icons.notifications_none_rounded),
+              ),
+            );
+          },
         ),
       ],
     );

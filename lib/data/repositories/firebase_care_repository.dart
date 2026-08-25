@@ -111,6 +111,14 @@ class FirebaseCareRepository implements CareRepository {
       data['createdAt'] = FieldValue.serverTimestamp();
     }
     await reference.set(data, SetOptions(merge: true));
+    if (record.dueDate != null) {
+      await _sendNotification(
+        recipientId: actor.uid,
+        title: '${record.type.label} Reminder Set',
+        body: 'Reminder set for ${record.title} (Due: ${record.dueDate!.day}/${record.dueDate!.month}/${record.dueDate!.year}).',
+        type: 'vaccination',
+      );
+    }
     return reference.id;
   });
 
@@ -262,6 +270,18 @@ class FirebaseCareRepository implements CareRepository {
       }
       transaction.set(accessRef, accessData, SetOptions(merge: true));
     });
+    await _sendNotification(
+      recipientId: owner.uid,
+      title: 'Appointment Booked',
+      body: 'Your appointment for ${pet.name} with ${veterinarian.name} is booked.',
+      type: 'appointment',
+    );
+    await _sendNotification(
+      recipientId: veterinarian.uid,
+      title: 'New Appointment Booking',
+      body: '${owner.name} booked an appointment for ${pet.name} on ${slot.start.day}/${slot.start.month} at ${slot.start.hour}:${slot.start.minute.toString().padLeft(2, '0')}.',
+      type: 'appointment',
+    );
     return appointmentRef.id;
   });
 
@@ -995,4 +1015,28 @@ class FirebaseCareRepository implements CareRepository {
     'already-exists' => 'That record already exists.',
     _ => 'The request could not be completed securely.',
   };
+
+  Future<void> _sendNotification({
+    required String recipientId,
+    required String title,
+    required String body,
+    required String type,
+  }) async {
+    try {
+      final docRef = _db
+          .collection('notifications')
+          .doc(recipientId)
+          .collection('items')
+          .doc();
+      await docRef.set({
+        'title': title,
+        'body': body,
+        'type': type,
+        'createdAt': FieldValue.serverTimestamp(),
+        'readAt': null,
+      });
+    } on Object {
+      // Background notifications failure should not break primary operation
+    }
+  }
 }
