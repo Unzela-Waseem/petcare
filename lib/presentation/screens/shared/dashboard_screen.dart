@@ -281,7 +281,7 @@ class _Header extends StatelessWidget {
           ),
         ),
         StreamBuilder<List<UserNotification>>(
-          stream: services.care.watchNotifications(user.uid),
+          stream: services.care.watchActivityNotifications(user),
           builder: (context, snapshot) {
             final unreadCount = snapshot.hasData
                 ? snapshot.data!.where((n) => n.readAt == null).length

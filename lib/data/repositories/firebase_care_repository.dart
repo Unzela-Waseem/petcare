@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/models/app_user.dart';
 import '../../domain/models/care_models.dart';
 import '../../domain/models/pet.dart';
 import '../../domain/models/user_role.dart';
 import '../../domain/repositories/care_repository.dart';
+import '../services/activity_notification_builder.dart';
 
 class FirebaseCareRepository implements CareRepository {
   FirebaseCareRepository({FirebaseFirestore? firestore, FirebaseAuth? auth})
@@ -14,6 +18,7 @@ class FirebaseCareRepository implements CareRepository {
 
   final FirebaseFirestore _db;
   final FirebaseAuth _auth;
+  final Map<String, _FirebaseActivityFeed> _activityFeeds = {};
 
   @override
   Stream<List<Pet>> watchOwnedPets(String ownerId) => _db
@@ -823,17 +828,34 @@ class FirebaseCareRepository implements CareRepository {
       });
 
   @override
+  Stream<List<UserNotification>> watchActivityNotifications(AppUser user) =>
+      _activityFeeds
+          .putIfAbsent(
+            user.uid,
+            () => _FirebaseActivityFeed(repository: this, user: user),
+          )
+          .stream;
+
+  @override
   Future<void> markNotificationRead({
     required String uid,
     required String notificationId,
-  }) => _safe(
-    () => _db
-        .collection('notifications')
-        .doc(uid)
-        .collection('items')
-        .doc(notificationId)
-        .update({'readAt': FieldValue.serverTimestamp()}),
-  );
+  }) {
+    if (notificationId.startsWith(activityNotificationPrefix)) {
+      final feed = _activityFeeds[uid];
+      return feed == null
+          ? Future<void>.value()
+          : feed.markRead(notificationId);
+    }
+    return _safe(
+      () => _db
+          .collection('notifications')
+          .doc(uid)
+          .collection('items')
+          .doc(notificationId)
+          .update({'readAt': FieldValue.serverTimestamp()}),
+    );
+  }
 
   @override
   Future<String> submitFeedback({
@@ -1073,4 +1095,134 @@ class FirebaseCareRepository implements CareRepository {
     'already-exists' => 'That record already exists.',
     _ => 'The request could not be completed securely.',
   };
+}
+
+class _FirebaseActivityFeed {
+  _FirebaseActivityFeed({required this.repository, required this.user}) {
+    unawaited(_start());
+  }
+
+  final FirebaseCareRepository repository;
+  final AppUser user;
+  final StreamController<List<UserNotification>> _changes =
+      StreamController<List<UserNotification>>.broadcast();
+  final List<StreamSubscription<dynamic>> _subscriptions = [];
+  final Map<String, StreamSubscription<List<HealthRecord>>>
+  _healthSubscriptions = {};
+  final Map<String, List<HealthRecord>> _healthRecords = {};
+
+  List<UserNotification> _trusted = const [];
+  List<CareAppointment> _appointments = const [];
+  List<AdoptionRequest> _adoptionRequests = const [];
+  List<BlogArticle> _blogs = const [];
+  List<Pet> _pets = const [];
+  Set<String> _readIds = const {};
+  List<UserNotification> _latest = const [];
+
+  String get _readKey => 'pawfectcare.activity_read.${user.uid}';
+
+  Stream<List<UserNotification>> get stream async* {
+    yield _latest;
+    yield* _changes.stream;
+  }
+
+  Future<void> _start() async {
+    final preferences = await SharedPreferences.getInstance();
+    _readIds = (preferences.getStringList(_readKey) ?? const <String>[])
+        .toSet();
+
+    _subscriptions.add(
+      repository.watchNotifications(user.uid).listen((items) {
+        _trusted = items;
+        _emit();
+      }, onError: (_) {}),
+    );
+    if (user.role != UserRole.shelterAdmin) {
+      _subscriptions.add(
+        repository.watchAppointments(user).listen((items) {
+          _appointments = items;
+          _emit();
+        }, onError: (_) {}),
+      );
+    }
+    if (user.role != UserRole.veterinarian) {
+      _subscriptions.add(
+        repository.watchAdoptionRequests(user).listen((items) {
+          _adoptionRequests = items;
+          _emit();
+        }, onError: (_) {}),
+      );
+    }
+    _subscriptions.add(
+      repository.watchBlogs().listen((items) {
+        _blogs = items;
+        _emit();
+      }, onError: (_) {}),
+    );
+
+    final petStream = switch (user.role) {
+      UserRole.petOwner => repository.watchOwnedPets(user.uid),
+      UserRole.veterinarian => repository.watchAssignedPets(user.uid),
+      UserRole.shelterAdmin => null,
+    };
+    if (petStream != null) {
+      _subscriptions.add(
+        petStream.listen(
+          (pets) => unawaited(_replacePetSubscriptions(pets)),
+          onError: (_) {},
+        ),
+      );
+    }
+    _emit();
+  }
+
+  Future<void> _replacePetSubscriptions(List<Pet> pets) async {
+    _pets = pets;
+    final incomingIds = pets.map((pet) => pet.id).toSet();
+    final removedIds = _healthSubscriptions.keys
+        .where((id) => !incomingIds.contains(id))
+        .toList();
+    for (final id in removedIds) {
+      await _healthSubscriptions.remove(id)?.cancel();
+      _healthRecords.remove(id);
+    }
+    for (final pet in pets) {
+      if (_healthSubscriptions.containsKey(pet.id)) continue;
+      _healthSubscriptions[pet.id] = repository
+          .watchHealthRecords(pet.id)
+          .listen((records) {
+            _healthRecords[pet.id] = records;
+            _emit();
+          }, onError: (_) {});
+    }
+    _emit();
+  }
+
+  Future<void> markRead(String notificationId) async {
+    _readIds = {..._readIds, notificationId};
+    final preferences = await SharedPreferences.getInstance();
+    final values = _readIds.toList();
+    if (values.length > 200) values.removeRange(0, values.length - 200);
+    await preferences.setStringList(_readKey, values);
+    _emit();
+  }
+
+  void _emit() {
+    final derived = buildActivityNotifications(
+      user: user,
+      appointments: _appointments,
+      adoptionRequests: _adoptionRequests,
+      blogs: _blogs,
+      pets: _pets,
+      healthRecords: _healthRecords,
+      readIds: _readIds,
+    );
+    final byId = <String, UserNotification>{
+      for (final item in [..._trusted, ...derived]) item.id: item,
+    };
+    _latest = byId.values.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    _latest = _latest.take(40).toList(growable: false);
+    if (!_changes.isClosed) _changes.add(_latest);
+  }
 }

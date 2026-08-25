@@ -30,7 +30,7 @@ class _UserInbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => StreamBuilder<List<UserNotification>>(
-    stream: services.care.watchNotifications(user.uid),
+    stream: services.care.watchActivityNotifications(user),
     builder: (context, snapshot) {
       final updates = snapshot.data ?? const <UserNotification>[];
       return _InboxLayout(

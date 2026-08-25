@@ -704,6 +704,10 @@ class DemoCareRepository implements CareRepository {
     }
   }
 
+  @override
+  Stream<List<UserNotification>> watchActivityNotifications(AppUser user) =>
+      watchNotifications(user.uid);
+
   void _addNotification({
     required String title,
     required String body,

@@ -21,7 +21,7 @@ class NotificationsScreen extends StatelessWidget {
     backgroundColor: AppColors.cream,
     appBar: AppBar(title: const Text('Notifications')),
     body: StreamBuilder<List<UserNotification>>(
-      stream: services.care.watchNotifications(user.uid),
+      stream: services.care.watchActivityNotifications(user),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Center(

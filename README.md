@@ -21,7 +21,7 @@ The UI follows a warm editorial pet-care system: cream canvases, peach feature p
 - Profile editing/photo, recent-login password changes, notification preferences, feedback, and Google Maps links
 - Firebase Authentication and private profile adapter
 - Firebase Cloud Messaging permission, token rotation, per-device storage, and logout cleanup
-- No-card fallback: ordinary images sync through a restricted Cloudinary unsigned preset, private medical reports remain on-device, and appointment/vaccine/follow-up reminders use local notifications
+- No-card fallback: ordinary images sync through a restricted Cloudinary unsigned preset, private medical reports remain on-device, appointment/vaccine/follow-up reminders use local notifications, and an authorization-scoped in-app activity feed derives appointment, adoption, health, and blog updates without client-created notification documents
 - Strict Firestore and Storage rules with deny-by-default behavior
 - Trusted Cloud Functions for appointment, vaccine, adoption, and blog notifications
 - Firestore composite indexes and seeded production store/care-tip content
@@ -86,7 +86,7 @@ The repository is connected to Firebase project `pawfectcare-unzela-2026`:
 
 Cloud Storage and Cloud Functions require the Blaze plan for this project. The complete Storage rules and notification Functions are checked in and pass local emulator/lint/security verification, but Firebase rejected their live deployment while this project remains on Spark.
 
-The Firebase-connected app supports a no-card hybrid fallback. Pet, profile, adoption-listing, and success-story images can sync through Cloudinary, while confidential medical reports remain in private application storage on Android/iOS. Appointment, vaccination, deworming, and clinical follow-up reminders are scheduled on-device. Firestore records continue to sync, but medical files do not sync to another device and server-originated adoption/blog notifications still require Functions.
+The Firebase-connected app supports a no-card hybrid fallback. Pet, profile, adoption-listing, and success-story images can sync through Cloudinary, while confidential medical reports remain in private application storage on Android/iOS. Appointment, vaccination, deworming, and clinical follow-up reminders are scheduled on-device. The in-app inbox safely derives appointment, adoption, health, and blog updates from the current user's already-authorized Firestore queries, with read state stored locally. Firestore records continue to sync, but medical files do not sync to another device and remote push delivery while the app is closed still requires Functions.
 
 The values below are now safe public defaults in the Flutter client. They can
 still be overridden explicitly for another Firebase/Cloudinary environment:

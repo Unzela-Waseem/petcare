@@ -92,6 +92,7 @@ abstract interface class CareRepository {
   });
 
   Stream<List<UserNotification>> watchNotifications(String uid);
+  Stream<List<UserNotification>> watchActivityNotifications(AppUser user);
   Future<void> markNotificationRead({
     required String uid,
     required String notificationId,
