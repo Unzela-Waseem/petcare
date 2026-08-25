@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/config/app_services.dart';
 import '../../../core/widgets/section_heading.dart';
+import '../../../core/utils/search_matcher.dart';
 import '../../../domain/models/app_user.dart';
 import '../../../domain/models/care_models.dart';
 import '../../../domain/models/user_role.dart';
@@ -28,10 +29,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final query = _query.trim();
     final features = FeatureCatalog.forRole(widget.user.role)
         .where(
           (feature) =>
-              feature.title.toLowerCase().contains(_query.toLowerCase()),
+              SearchMatcher.matches(query, [feature.title, feature.subtitle]),
         )
         .toList();
     return SafeArea(
@@ -63,11 +65,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 const SizedBox(height: 18),
                 _RoleChips(role: widget.user.role),
+                if (query.isNotEmpty) ...[
+                  const SizedBox(height: 18),
+                  _SearchDestinations(
+                    query: query,
+                    features: _searchFeatures(widget.user.role),
+                    onOpen: (feature) => FeatureRouter.open(
+                      context,
+                      feature: feature,
+                      user: widget.user,
+                      services: widget.services,
+                      initialQuery: query,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 22),
-                _buildHero(context),
-                const SizedBox(height: 24),
+                if (query.isEmpty) ...[
+                  _buildHero(context),
+                  const SizedBox(height: 24),
+                ],
                 SectionHeading(
-                  title: _sectionTitle(widget.user.role),
+                  title: query.isEmpty
+                      ? _sectionTitle(widget.user.role)
+                      : 'Matching tools',
                   action: '${features.length} tools',
                 ),
                 const SizedBox(height: 8),
@@ -116,6 +136,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
     UserRole.shelterAdmin => 'Shelter workspace',
   };
 
+  List<FeatureAction> _searchFeatures(UserRole role) {
+    final titles = switch (role) {
+      UserRole.petOwner => const [
+        'My Pets',
+        'Health Records',
+        'Care Tips',
+        'Pet Store',
+        'Adoption',
+      ],
+      UserRole.veterinarian => const [
+        'Assigned Pets',
+        'Medical Records',
+        'Care Tips',
+      ],
+      UserRole.shelterAdmin => const ['Pet Listings', 'Care Tips'],
+    };
+    final catalog = FeatureCatalog.forRole(role);
+    return titles
+        .map((title) => catalog.firstWhere((item) => item.title == title))
+        .toList();
+  }
+
   Widget _buildHero(BuildContext context) {
     final role = widget.user.role;
     final feature = role == UserRole.shelterAdmin
@@ -146,6 +188,54 @@ class _DashboardScreenState extends State<DashboardScreen> {
       services: widget.services,
     );
   }
+}
+
+class _SearchDestinations extends StatelessWidget {
+  const _SearchDestinations({
+    required this.query,
+    required this.features,
+    required this.onOpen,
+  });
+
+  final String query;
+  final List<FeatureAction> features;
+  final ValueChanged<FeatureAction> onOpen;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(22),
+      border: Border.all(color: AppColors.border),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Search authorized data for “$query”',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 6),
+        const Text('Choose where you want to search.'),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: features
+              .map(
+                (feature) => ActionChip(
+                  avatar: Icon(feature.icon, size: 18),
+                  label: Text('Search in ${feature.title}'),
+                  onPressed: () => onOpen(feature),
+                ),
+              )
+              .toList(),
+        ),
+      ],
+    ),
+  );
 }
 
 class _Header extends StatelessWidget {

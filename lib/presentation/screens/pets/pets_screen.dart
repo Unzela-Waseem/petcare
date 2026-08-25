@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/config/app_services.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/media_picker.dart';
+import '../../../core/utils/search_matcher.dart';
 import '../../../core/widgets/adaptive_image.dart';
 import '../../../core/widgets/paw_button.dart';
 import '../../../domain/models/app_user.dart';
@@ -13,17 +14,37 @@ import '../../../domain/repositories/media_storage_service.dart';
 import 'pet_detail_screen.dart';
 
 class PetsScreen extends StatefulWidget {
-  const PetsScreen({required this.user, required this.services, super.key});
+  const PetsScreen({
+    required this.user,
+    required this.services,
+    this.initialQuery = '',
+    super.key,
+  });
 
   final AppUser user;
   final AppServices services;
+  final String initialQuery;
 
   @override
   State<PetsScreen> createState() => _PetsScreenState();
 }
 
 class _PetsScreenState extends State<PetsScreen> {
-  String _query = '';
+  late final TextEditingController _searchController;
+  late String _query;
+
+  @override
+  void initState() {
+    super.initState();
+    _query = widget.initialQuery;
+    _searchController = TextEditingController(text: _query);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +63,7 @@ class _PetsScreenState extends State<PetsScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
             child: TextField(
+              controller: _searchController,
               onChanged: (value) => setState(() => _query = value),
               decoration: const InputDecoration(
                 hintText: 'Search by pet name or breed',
@@ -62,12 +84,14 @@ class _PetsScreenState extends State<PetsScreen> {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                final query = _query.trim().toLowerCase();
+                final query = _query.trim();
                 final pets = snapshot.data!
                     .where(
-                      (pet) =>
-                          pet.name.toLowerCase().contains(query) ||
-                          pet.breed.toLowerCase().contains(query),
+                      (pet) => SearchMatcher.matches(query, [
+                        pet.name,
+                        pet.breed,
+                        pet.species,
+                      ]),
                     )
                     .toList();
                 if (pets.isEmpty) {

@@ -4,22 +4,43 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/config/app_services.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/search_matcher.dart';
 import '../../../domain/models/app_user.dart';
 import '../../../domain/models/care_models.dart';
 import '../../../domain/repositories/care_repository.dart';
 
 class StoreScreen extends StatefulWidget {
-  const StoreScreen({required this.user, required this.services, super.key});
+  const StoreScreen({
+    required this.user,
+    required this.services,
+    this.initialQuery = '',
+    super.key,
+  });
   final AppUser user;
   final AppServices services;
+  final String initialQuery;
 
   @override
   State<StoreScreen> createState() => _StoreScreenState();
 }
 
 class _StoreScreenState extends State<StoreScreen> {
-  String _query = '';
+  late final TextEditingController _searchController;
+  late String _query;
   String? _category;
+
+  @override
+  void initState() {
+    super.initState();
+    _query = widget.initialQuery;
+    _searchController = TextEditingController(text: _query);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -39,17 +60,21 @@ class _StoreScreenState extends State<StoreScreen> {
           stream: widget.services.care.watchWishlist(widget.user.uid),
           builder: (context, savedSnapshot) {
             final saved = savedSnapshot.data ?? const <String>{};
-            final query = _query.trim().toLowerCase();
+            final query = _query.trim();
             final visible = products.where((item) {
               return (_category == null || item.category == _category) &&
-                  (item.name.toLowerCase().contains(query) ||
-                      item.description.toLowerCase().contains(query));
+                  SearchMatcher.matches(query, [
+                    item.name,
+                    item.description,
+                    item.category,
+                  ]);
             }).toList();
             return Column(
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
                   child: TextField(
+                    controller: _searchController,
                     onChanged: (value) => setState(() => _query = value),
                     decoration: const InputDecoration(
                       hintText: 'Search products',
@@ -143,18 +168,38 @@ class _StoreScreenState extends State<StoreScreen> {
 }
 
 class CareTipsScreen extends StatefulWidget {
-  const CareTipsScreen({required this.user, required this.services, super.key});
+  const CareTipsScreen({
+    required this.user,
+    required this.services,
+    this.initialQuery = '',
+    super.key,
+  });
   final AppUser user;
   final AppServices services;
+  final String initialQuery;
 
   @override
   State<CareTipsScreen> createState() => _CareTipsScreenState();
 }
 
 class _CareTipsScreenState extends State<CareTipsScreen> {
-  String _query = '';
+  late final TextEditingController _searchController;
+  late String _query;
   String? _category;
   bool _offlineOnly = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _query = widget.initialQuery;
+    _searchController = TextEditingController(text: _query);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -216,14 +261,17 @@ class _CareTipsScreenState extends State<CareTipsScreen> {
   }) {
     final categories = articles.map((item) => item.category).toSet().toList()
       ..sort();
-    final query = _query.trim().toLowerCase();
+    final query = _query.trim();
     final visible = articles
         .where(
           (item) =>
               (_category == null || item.category == _category) &&
-              (item.title.toLowerCase().contains(query) ||
-                  item.summary.toLowerCase().contains(query) ||
-                  item.content.toLowerCase().contains(query)),
+              SearchMatcher.matches(query, [
+                item.title,
+                item.category,
+                item.summary,
+                item.content,
+              ]),
         )
         .toList();
     return Column(
@@ -231,6 +279,7 @@ class _CareTipsScreenState extends State<CareTipsScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
           child: TextField(
+            controller: _searchController,
             onChanged: (value) => setState(() => _query = value),
             decoration: const InputDecoration(
               hintText: 'Search article keywords',

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../core/config/app_services.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/media_picker.dart';
+import '../../../core/utils/search_matcher.dart';
 import '../../../core/widgets/adaptive_image.dart';
 import '../../../core/widgets/paw_button.dart';
 import '../../../domain/models/app_user.dart';
@@ -17,21 +18,37 @@ class AdoptionListingsScreen extends StatefulWidget {
   const AdoptionListingsScreen({
     required this.user,
     required this.services,
+    this.initialQuery = '',
     super.key,
   });
 
   final AppUser user;
   final AppServices services;
+  final String initialQuery;
 
   @override
   State<AdoptionListingsScreen> createState() => _AdoptionListingsScreenState();
 }
 
 class _AdoptionListingsScreenState extends State<AdoptionListingsScreen> {
-  String _query = '';
+  late final TextEditingController _searchController;
+  late String _query;
   AdoptionStatus? _status;
 
   bool get _isAdmin => widget.user.role == UserRole.shelterAdmin;
+
+  @override
+  void initState() {
+    super.initState();
+    _query = widget.initialQuery;
+    _searchController = TextEditingController(text: _query);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +83,7 @@ class _AdoptionListingsScreenState extends State<AdoptionListingsScreen> {
       Padding(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
         child: TextField(
+          controller: _searchController,
           onChanged: (value) => setState(() => _query = value),
           decoration: const InputDecoration(
             hintText: 'Search pet name, species, or health status',
@@ -137,14 +155,16 @@ class _AdoptionListingsScreenState extends State<AdoptionListingsScreen> {
             if (!snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
             }
-            final query = _query.trim().toLowerCase();
+            final query = _query.trim();
             final listings = snapshot.data!
                 .where(
                   (item) =>
                       (_status == null || item.status == _status) &&
-                      (item.petName.toLowerCase().contains(query) ||
-                          item.species.toLowerCase().contains(query) ||
-                          item.healthStatus.toLowerCase().contains(query)),
+                      SearchMatcher.matches(query, [
+                        item.petName,
+                        item.species,
+                        item.healthStatus,
+                      ]),
                 )
                 .toList();
             if (listings.isEmpty) {

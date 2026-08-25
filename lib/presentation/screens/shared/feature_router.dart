@@ -19,22 +19,40 @@ abstract final class FeatureRouter {
     required FeatureAction feature,
     required AppUser user,
     required AppServices services,
+    String initialQuery = '',
   }) {
     final page = switch (feature.title) {
-      'My Pets' ||
-      'Assigned Pets' => PetsScreen(user: user, services: services),
-      'Health Records' ||
-      'Medical Records' => HealthRecordsScreen(user: user, services: services),
+      'My Pets' || 'Assigned Pets' => PetsScreen(
+        user: user,
+        services: services,
+        initialQuery: initialQuery,
+      ),
+      'Health Records' || 'Medical Records' => HealthRecordsScreen(
+        user: user,
+        services: services,
+        initialQuery: initialQuery,
+      ),
       'Patient History' => PatientHistoryScreen(user: user, services: services),
       'Appointments' || "Today's Appointments" => AppointmentsScreen(
         user: user,
         services: services,
       ),
       'Calendar' => AvailabilityScreen(user: user, services: services),
-      'Pet Store' => StoreScreen(user: user, services: services),
-      'Care Tips' => CareTipsScreen(user: user, services: services),
-      'Adoption' ||
-      'Pet Listings' => AdoptionListingsScreen(user: user, services: services),
+      'Pet Store' => StoreScreen(
+        user: user,
+        services: services,
+        initialQuery: initialQuery,
+      ),
+      'Care Tips' => CareTipsScreen(
+        user: user,
+        services: services,
+        initialQuery: initialQuery,
+      ),
+      'Adoption' || 'Pet Listings' => AdoptionListingsScreen(
+        user: user,
+        services: services,
+        initialQuery: initialQuery,
+      ),
       'Adoption Requests' => AdoptionRequestsScreen(
         user: user,
         services: services,

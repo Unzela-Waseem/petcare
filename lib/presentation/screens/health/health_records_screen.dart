@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../core/config/app_services.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/media_picker.dart';
+import '../../../core/utils/search_matcher.dart';
 import '../../../core/widgets/paw_button.dart';
 import '../../../domain/models/app_user.dart';
 import '../../../domain/models/care_models.dart';
@@ -17,12 +18,14 @@ class HealthRecordsScreen extends StatefulWidget {
     required this.user,
     required this.services,
     this.initialPet,
+    this.initialQuery = '',
     super.key,
   });
 
   final AppUser user;
   final AppServices services;
   final Pet? initialPet;
+  final String initialQuery;
 
   @override
   State<HealthRecordsScreen> createState() => _HealthRecordsScreenState();
@@ -31,15 +34,24 @@ class HealthRecordsScreen extends StatefulWidget {
 class _HealthRecordsScreenState extends State<HealthRecordsScreen> {
   Pet? _selectedPet;
   HealthRecordType? _filter;
-  String _query = '';
+  late final TextEditingController _searchController;
+  late String _query;
 
   @override
   void initState() {
     super.initState();
     _selectedPet = widget.initialPet;
+    _query = widget.initialQuery;
+    _searchController = TextEditingController(text: _query);
     if (widget.user.role == UserRole.veterinarian) {
       _filter = HealthRecordType.medical;
     }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -102,6 +114,7 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
                 child: TextField(
+                  controller: _searchController,
                   onChanged: (value) => setState(() => _query = value),
                   decoration: const InputDecoration(
                     hintText: 'Search medical requirement or record',
@@ -142,7 +155,7 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> {
                     if (!snapshot.hasData) {
                       return const Center(child: CircularProgressIndicator());
                     }
-                    final query = _query.trim().toLowerCase();
+                    final query = _query.trim();
                     final records = snapshot.data!.where((record) {
                       final clinical =
                           record.type == HealthRecordType.medical ||
@@ -152,15 +165,15 @@ class _HealthRecordsScreenState extends State<HealthRecordsScreen> {
                           (_filter == HealthRecordType.medical
                               ? clinical
                               : record.type == _filter);
-                      final searchable = [
+                      final matchesQuery = SearchMatcher.matches(query, [
                         record.title,
                         record.type.label,
                         record.diagnosis,
                         record.treatment,
                         record.prescription,
                         record.notes,
-                      ].join(' ').toLowerCase();
-                      return matchesType && searchable.contains(query);
+                      ]);
+                      return matchesType && matchesQuery;
                     }).toList();
                     if (records.isEmpty) {
                       return _EmptyRecords(

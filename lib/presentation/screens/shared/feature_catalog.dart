@@ -127,6 +127,12 @@ abstract final class FeatureCatalog {
       canCreate: true,
     ),
     FeatureAction(
+      title: 'Care Tips',
+      subtitle: 'Helpful expert guides',
+      icon: Icons.auto_stories_outlined,
+      color: AppColors.lavender,
+    ),
+    FeatureAction(
       title: 'Success Stories',
       subtitle: 'Published happy endings',
       icon: Icons.auto_awesome_outlined,
@@ -172,6 +178,12 @@ abstract final class FeatureCatalog {
       subtitle: 'Shelter inquiries',
       icon: Icons.mark_email_unread_outlined,
       color: AppColors.peachLight,
+    ),
+    FeatureAction(
+      title: 'Care Tips',
+      subtitle: 'Helpful expert guides',
+      icon: Icons.auto_stories_outlined,
+      color: AppColors.lavender,
     ),
     FeatureAction(
       title: 'Notifications',
