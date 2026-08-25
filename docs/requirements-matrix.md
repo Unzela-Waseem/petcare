@@ -13,7 +13,7 @@ This matrix maps the supplied specification to the implemented production path. 
 | Care tips | Training, Nutrition, First Aid, Pet Care; keyword search, category filter, private bookmarks, explicit offline save/remove and offline fallback | Four guides seeded live |
 | Adoption | Search/filter listings, submit private request, view owner history | Firestore live; listing images sync through restricted Cloudinary |
 | Veterinarian | Assigned-pet search, protected patient history, diagnosis/treatment/prescription/follow-up, report selection, availability CRUD, appointment confirm/reschedule/complete/cancel | Firestore live; reports persist on the current device and follow-ups schedule locally |
-| Shelter Admin | Create shelter profile; own listing CRUD/status; review/approve/reject requests; story draft/edit/publish/delete; manage volunteer/donation/inquiry statuses | Firestore live; ordinary images sync through restricted Cloudinary |
+| Shelter Admin | Create shelter profile; own listing CRUD/status; review/approve/reject requests; private story drafts, image validation, edit/publish/unpublish/delete, public gallery preview; manage volunteer/donation/inquiry statuses | Firestore live; published stories are readable in the Pet Owner and Veterinarian galleries; ordinary images sync through restricted Cloudinary |
 | Notifications | Preferences, recipient-only inbox/read state, local appointment/vaccine/deworming/follow-up scheduling, plus optional FCM token rotation and trusted appointment/adoption/blog triggers | On-device reminders work without billing; server push awaits Blaze Functions; APNs/VAPID remain owner credentials |
 | Profile | View/edit allowed name/phone/photo, immutable role notice, password change, notification preferences, logout | Firestore/Auth live; photo syncs through restricted Cloudinary |
 | Feedback/contact/maps | Suggestions, bugs, feedback; shelter inquiry; volunteer/donation forms; vet/shelter locations; Google Maps external deep links | Firestore and maps live |
@@ -25,7 +25,7 @@ This matrix maps the supplied specification to the implemented production path. 
 
 - `flutter analyze`: no issues.
 - `flutter test`: all unit/widget tests pass.
-- Firebase Emulator Suite: 20 Firestore/Storage authorization tests pass, including cancelled-slot rebooking without history overwrite.
+- Firebase Emulator Suite: 29 Firestore/Storage authorization tests pass, including success-story draft privacy, image-required publishing, and cancelled-slot rebooking without history overwrite.
 - Functions: syntax check and ESLint pass; production dependency audit reports zero vulnerabilities; all trigger definitions load in the emulator.
 - Firestore rules and indexes are deployed to `pawfectcare-unzela-2026`.
 - Live Firestore contains four products and four care guides.

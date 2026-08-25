@@ -73,6 +73,12 @@ abstract final class FeatureCatalog {
       color: AppColors.peachLight,
     ),
     FeatureAction(
+      title: 'Success Stories',
+      subtitle: 'Published happy endings',
+      icon: Icons.auto_awesome_outlined,
+      color: AppColors.yellow,
+    ),
+    FeatureAction(
       title: 'Notifications',
       subtitle: 'Reminders & updates',
       icon: Icons.notifications_none_rounded,
@@ -119,6 +125,12 @@ abstract final class FeatureCatalog {
       icon: Icons.medical_information_outlined,
       color: AppColors.peachLight,
       canCreate: true,
+    ),
+    FeatureAction(
+      title: 'Success Stories',
+      subtitle: 'Published happy endings',
+      icon: Icons.auto_awesome_outlined,
+      color: AppColors.yellow,
     ),
     FeatureAction(
       title: 'Notifications',

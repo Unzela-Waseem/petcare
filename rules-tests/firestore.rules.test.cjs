@@ -172,8 +172,8 @@ async function seedData() {
       title: 'Luna found a home',
       story: 'A published adoption story.',
       published: true,
-      photoPath: null,
-      photoUrl: null,
+      photoPath: 'cloudinary:public-story',
+      photoUrl: 'https://res.cloudinary.com/demo/image/upload/public-story.jpg',
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -497,6 +497,42 @@ describe('PawfectCare Firestore authorization', () => {
     assert.equal(publicStories.size, 1);
     await assertFails(
       authenticated('owner-a').doc('successStories/private-story').get(),
+    );
+  });
+
+  it('requires an image before a shelter publishes a success story', async () => {
+    const shelter = authenticated('shelter-a');
+    const base = {
+      shelterId: 'shelter-one',
+      adminId: 'shelter-a',
+      title: 'Milo found a family',
+      story: 'A safe and loving adoption.',
+      photoPath: null,
+      photoUrl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    await assertSucceeds(
+      shelter.doc('successStories/new-draft').set({
+        ...base,
+        published: false,
+      }),
+    );
+    await assertFails(
+      shelter.doc('successStories/no-photo').set({
+        ...base,
+        published: true,
+      }),
+    );
+    await assertSucceeds(
+      shelter.doc('successStories/new-draft').update({
+        published: true,
+        photoPath: 'cloudinary:new-draft',
+        photoUrl:
+          'https://res.cloudinary.com/demo/image/upload/new-draft.jpg',
+        updatedAt: new Date(),
+      }),
     );
   });
 

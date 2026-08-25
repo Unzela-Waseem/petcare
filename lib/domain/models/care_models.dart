@@ -238,6 +238,8 @@ class SuccessStory {
     required this.published,
     this.photoPath,
     this.photoUrl,
+    this.createdAt,
+    this.updatedAt,
   });
 
   final String id;
@@ -248,6 +250,32 @@ class SuccessStory {
   final bool published;
   final String? photoPath;
   final String? photoUrl;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  SuccessStory copyWith({
+    String? id,
+    String? shelterId,
+    String? adminId,
+    String? title,
+    String? story,
+    bool? published,
+    String? photoPath,
+    String? photoUrl,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => SuccessStory(
+    id: id ?? this.id,
+    shelterId: shelterId ?? this.shelterId,
+    adminId: adminId ?? this.adminId,
+    title: title ?? this.title,
+    story: story ?? this.story,
+    published: published ?? this.published,
+    photoPath: photoPath ?? this.photoPath,
+    photoUrl: photoUrl ?? this.photoUrl,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
 }
 
 class CommunityRequest {

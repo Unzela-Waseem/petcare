@@ -83,4 +83,45 @@ void main() {
       expect(updated.single.status, 'approved');
     },
   );
+
+  test(
+    'success-story drafts stay private until the shelter publishes them',
+    () async {
+      final repository = DemoCareRepository();
+      final draft = SuccessStory(
+        id: '',
+        shelterId: 'demo-shelter',
+        adminId: shelterAdmin.uid,
+        title: 'Coco found a family',
+        story: 'Coco is safe and loved in her new home.',
+        published: false,
+        photoPath: 'cloudinary:coco-story',
+        photoUrl: 'https://example.com/coco.jpg',
+      );
+
+      final id = await repository.saveSuccessStory(draft);
+      expect(
+        await repository.watchSuccessStories(shelterId: 'demo-shelter').first,
+        hasLength(1),
+      );
+      expect(await repository.watchSuccessStories().first, isEmpty);
+
+      await repository.saveSuccessStory(
+        draft.copyWith(id: id, published: true),
+      );
+      final gallery = await repository.watchSuccessStories().first;
+      expect(gallery, hasLength(1));
+      expect(gallery.single.title, 'Coco found a family');
+      expect(
+        FeatureCatalog.owner.any((item) => item.title == 'Success Stories'),
+        isTrue,
+      );
+      expect(
+        FeatureCatalog.veterinarian.any(
+          (item) => item.title == 'Success Stories',
+        ),
+        isTrue,
+      );
+    },
+  );
 }

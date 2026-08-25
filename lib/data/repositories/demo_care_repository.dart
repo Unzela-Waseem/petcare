@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../../domain/models/app_user.dart';
 import '../../domain/models/care_models.dart';
 import '../../domain/models/pet.dart';
@@ -117,6 +119,9 @@ class DemoCareRepository implements CareRepository {
   final List<AvailabilitySlot> _slots = [];
   final List<AdoptionRequest> _adoptionRequests = [];
   final List<CommunityRequest> _communityRequests = [];
+  final List<SuccessStory> _successStories = [];
+  final StreamController<void> _successStoryChanges =
+      StreamController<void>.broadcast();
   final List<ProductItem> _products;
   final List<BlogArticle> _blogs;
   final Set<String> _wishlist = {};
@@ -465,16 +470,57 @@ class DemoCareRepository implements CareRepository {
   );
 
   @override
-  Stream<List<SuccessStory>> watchSuccessStories({String? shelterId}) =>
-      Stream.value(const []);
+  Stream<List<SuccessStory>> watchSuccessStories({String? shelterId}) async* {
+    yield _visibleStories(shelterId);
+    await for (final _ in _successStoryChanges.stream) {
+      yield _visibleStories(shelterId);
+    }
+  }
 
   @override
-  Future<String> saveSuccessStory(SuccessStory story) async => story.id.isEmpty
-      ? 'demo-story-${DateTime.now().microsecondsSinceEpoch}'
-      : story.id;
+  Future<String> saveSuccessStory(SuccessStory story) async {
+    final now = DateTime.now();
+    final id = story.id.isEmpty
+        ? 'demo-story-${now.microsecondsSinceEpoch}'
+        : story.id;
+    final existingIndex = _successStories.indexWhere((item) => item.id == id);
+    final saved = story.copyWith(
+      id: id,
+      createdAt: existingIndex < 0
+          ? story.createdAt ?? now
+          : _successStories[existingIndex].createdAt,
+      updatedAt: now,
+    );
+    if (existingIndex < 0) {
+      _successStories.add(saved);
+    } else {
+      _successStories[existingIndex] = saved;
+    }
+    _successStoryChanges.add(null);
+    return id;
+  }
 
   @override
-  Future<void> deleteSuccessStory(SuccessStory story) async {}
+  Future<void> deleteSuccessStory(SuccessStory story) async {
+    _successStories.removeWhere((item) => item.id == story.id);
+    _successStoryChanges.add(null);
+  }
+
+  List<SuccessStory> _visibleStories(String? shelterId) {
+    final stories = _successStories
+        .where(
+          (story) => shelterId == null
+              ? story.published
+              : story.shelterId == shelterId,
+        )
+        .toList();
+    stories.sort(
+      (a, b) => (b.updatedAt ?? b.createdAt ?? DateTime(1970)).compareTo(
+        a.updatedAt ?? a.createdAt ?? DateTime(1970),
+      ),
+    );
+    return stories;
+  }
 
   @override
   Stream<List<CommunityRequest>> watchVolunteerRequests(AppUser user) =>

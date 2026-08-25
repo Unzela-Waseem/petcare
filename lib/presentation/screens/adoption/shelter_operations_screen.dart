@@ -16,15 +16,18 @@ class SuccessStoriesScreen extends StatelessWidget {
   const SuccessStoriesScreen({
     required this.user,
     required this.services,
+    this.galleryOnly = false,
     super.key,
   });
   final AppUser user;
   final AppServices services;
+  final bool galleryOnly;
+
+  bool get _isManager => user.role == UserRole.shelterAdmin && !galleryOnly;
 
   @override
   Widget build(BuildContext context) {
-    final admin = user.role == UserRole.shelterAdmin;
-    if (!admin) return _storiesScaffold(context, null);
+    if (!_isManager) return _storiesScaffold(context, null);
     return StreamBuilder<List<ShelterProfile>>(
       stream: services.care.watchShelters(),
       builder: (context, snapshot) {
@@ -46,10 +49,29 @@ class SuccessStoriesScreen extends StatelessWidget {
     ShelterProfile? shelter,
   ) => Scaffold(
     backgroundColor: AppColors.cream,
-    appBar: AppBar(title: const Text('Success Stories')),
+    appBar: AppBar(
+      title: Text(_isManager ? 'Manage Success Stories' : 'Success Stories'),
+      actions: _isManager
+          ? [
+              IconButton(
+                tooltip: 'Preview public gallery',
+                onPressed: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => SuccessStoriesScreen(
+                      user: user,
+                      services: services,
+                      galleryOnly: true,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.visibility_outlined),
+              ),
+            ]
+          : null,
+    ),
     body: StreamBuilder<List<SuccessStory>>(
       stream: services.care.watchSuccessStories(
-        shelterId: user.role == UserRole.shelterAdmin ? shelter?.id : null,
+        shelterId: _isManager ? shelter?.id : null,
       ),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
@@ -66,7 +88,17 @@ class SuccessStoriesScreen extends StatelessWidget {
         }
         final stories = snapshot.data!;
         if (stories.isEmpty) {
-          return const Center(child: Text('No success stories yet.'));
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(28),
+              child: Text(
+                _isManager
+                    ? 'No stories yet. Create a draft, add a photo, then publish it to the public gallery.'
+                    : 'No published success stories yet.',
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
         }
         return ListView.separated(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
@@ -104,23 +136,51 @@ class SuccessStoriesScreen extends StatelessWidget {
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                       ),
-                      if (user.role == UserRole.shelterAdmin)
+                      if (_isManager)
                         Chip(
-                          label: Text(story.published ? 'Published' : 'Draft'),
+                          label: Text(
+                            story.published
+                                ? 'Published in gallery'
+                                : 'Draft · private',
+                          ),
                         ),
                     ],
                   ),
                   const SizedBox(height: 6),
                   Text(story.story),
-                  if (user.role == UserRole.shelterAdmin &&
-                      shelter != null) ...[
+                  if (story.updatedAt != null || story.createdAt != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      DateFormat(
+                        'd MMM yyyy',
+                      ).format(story.updatedAt ?? story.createdAt!),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                  if (_isManager && shelter != null) ...[
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
+                      runSpacing: 8,
                       children: [
                         OutlinedButton(
                           onPressed: () => _edit(context, shelter, story),
                           child: const Text('Edit'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () => _setPublished(
+                            context,
+                            story,
+                            published: !story.published,
+                          ),
+                          icon: Icon(
+                            story.published
+                                ? Icons.visibility_off_outlined
+                                : Icons.publish_outlined,
+                          ),
+                          label: Text(
+                            story.published ? 'Unpublish' : 'Publish',
+                          ),
                         ),
                         OutlinedButton(
                           onPressed: () => _delete(context, story),
@@ -136,7 +196,7 @@ class SuccessStoriesScreen extends StatelessWidget {
         );
       },
     ),
-    floatingActionButton: user.role == UserRole.shelterAdmin && shelter != null
+    floatingActionButton: _isManager && shelter != null
         ? FloatingActionButton.extended(
             onPressed: () => _edit(context, shelter, null),
             icon: const Icon(Icons.add_rounded),
@@ -161,6 +221,26 @@ class SuccessStoriesScreen extends StatelessWidget {
   );
 
   Future<void> _delete(BuildContext context, SuccessStory story) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete this story?'),
+        content: const Text(
+          'The story will be removed from your manager and the public gallery.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Keep'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
     try {
       await services.care.deleteSuccessStory(story);
       if (story.photoPath != null) {
@@ -174,6 +254,49 @@ class SuccessStoriesScreen extends StatelessWidget {
               error is CareFailure
                   ? error.message
                   : 'Story could not be deleted.',
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _setPublished(
+    BuildContext context,
+    SuccessStory story, {
+    required bool published,
+  }) async {
+    if (published && (story.photoUrl?.trim().isEmpty ?? true)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Add a story image in Edit before publishing.'),
+        ),
+      );
+      return;
+    }
+    try {
+      await services.care.saveSuccessStory(
+        story.copyWith(published: published),
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              published
+                  ? 'Story published to the public gallery.'
+                  : 'Story moved back to private drafts.',
+            ),
+          ),
+        );
+      }
+    } on Object catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              error is CareFailure
+                  ? error.message
+                  : 'Story status could not be updated.',
             ),
           ),
         );
@@ -199,10 +322,12 @@ class _StoryForm extends StatefulWidget {
 }
 
 class _StoryFormState extends State<_StoryForm> {
+  final _formKey = GlobalKey<FormState>();
   late final TextEditingController _title;
   late final TextEditingController _story;
   late bool _published;
   PickedMedia? _image;
+  String? _imageError;
   bool _busy = false;
 
   @override
@@ -226,66 +351,110 @@ class _StoryFormState extends State<_StoryForm> {
     appBar: AppBar(
       title: Text(widget.story == null ? 'Create Story' : 'Edit Story'),
     ),
-    body: ListView(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 28),
-      children: [
-        OutlinedButton.icon(
-          onPressed: _pick,
-          icon: const Icon(Icons.add_photo_alternate_outlined),
-          label: Text(_image?.name ?? 'Choose story image'),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _title,
-          decoration: const InputDecoration(labelText: 'Title'),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _story,
-          maxLines: 9,
-          maxLength: 5000,
-          decoration: const InputDecoration(labelText: 'Adoption story'),
-        ),
-        SwitchListTile(
-          value: _published,
-          onChanged: (value) => setState(() => _published = value),
-          title: const Text('Publish story'),
-          subtitle: const Text('Drafts remain visible only to your shelter.'),
-        ),
-        const SizedBox(height: 14),
-        PawButton(label: 'Save Story', busy: _busy, onPressed: _save),
-      ],
+    body: Form(
+      key: _formKey,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 28),
+        children: [
+          if (_image != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: Image.memory(
+                _image!.bytes,
+                height: 210,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            )
+          else if (widget.story?.photoUrl?.isNotEmpty ?? false)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: AdaptiveImage(
+                source: widget.story!.photoUrl!,
+                height: 210,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                fallback: const _StoryPhotoPlaceholder(),
+              ),
+            )
+          else
+            const _StoryPhotoPlaceholder(),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: _pick,
+            icon: const Icon(Icons.add_photo_alternate_outlined),
+            label: Text(_image?.name ?? 'Choose story image'),
+          ),
+          if (_imageError != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              _imageError!,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontSize: 12,
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _title,
+            decoration: const InputDecoration(labelText: 'Title'),
+            validator: _required,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _story,
+            maxLines: 9,
+            maxLength: 5000,
+            decoration: const InputDecoration(labelText: 'Adoption story'),
+            validator: _required,
+          ),
+          SwitchListTile(
+            value: _published,
+            onChanged: (value) => setState(() => _published = value),
+            title: const Text('Publish in public gallery'),
+            subtitle: Text(
+              _published
+                  ? 'Pet owners and veterinarians will be able to read it.'
+                  : 'Draft stays private to your shelter admin account.',
+            ),
+          ),
+          const SizedBox(height: 14),
+          PawButton(label: 'Save Story', busy: _busy, onPressed: _save),
+        ],
+      ),
     ),
   );
 
   Future<void> _pick() async {
     try {
       final image = await MediaPicker.image();
-      if (image != null && mounted) setState(() => _image = image);
+      if (image != null && mounted) {
+        setState(() {
+          _image = image;
+          _imageError = null;
+        });
+      }
     } on FormatException catch (error) {
       if (mounted) _show(error.message);
     }
   }
 
   Future<void> _save() async {
-    if (_title.text.trim().isEmpty || _story.text.trim().isEmpty) return;
+    if (!_formKey.currentState!.validate()) return;
+    final existingPhotoUrl = widget.story?.photoUrl?.trim() ?? '';
+    if (_published && _image == null && existingPhotoUrl.isEmpty) {
+      setState(() {
+        _imageError = 'Add an image before publishing this story.';
+      });
+      return;
+    }
     setState(() => _busy = true);
     try {
-      var story = SuccessStory(
-        id: widget.story?.id ?? '',
-        shelterId: widget.shelter.id,
-        adminId: widget.user.uid,
-        title: _title.text,
-        story: _story.text,
-        published: _published,
-        photoPath: widget.story?.photoPath,
-        photoUrl: widget.story?.photoUrl,
-      );
-      final id = await widget.services.care.saveSuccessStory(story);
+      StoredMedia? uploadedMedia;
       if (_image != null) {
-        late final StoredMedia media;
         try {
-          media = await widget.services.media.upload(
+          uploadedMedia = await widget.services.media.upload(
             path:
                 'shelters/${widget.shelter.id}/images/${DateTime.now().millisecondsSinceEpoch}_${_image!.name}',
             bytes: _image!.bytes,
@@ -293,27 +462,39 @@ class _StoryFormState extends State<_StoryForm> {
           );
         } on MediaFailure catch (error) {
           if (mounted) {
-            _show('${error.message} The story was saved without it.');
-            Navigator.pop(context);
+            setState(() => _imageError = error.message);
+            _show('${error.message} The story was not saved.');
           }
           return;
         }
-        if (widget.story?.photoPath != null) {
-          await widget.services.media.delete(widget.story!.photoPath!);
-        }
-        story = SuccessStory(
-          id: id,
-          shelterId: story.shelterId,
-          adminId: story.adminId,
-          title: story.title,
-          story: story.story,
-          published: story.published,
-          photoPath: media.path,
-          photoUrl: media.downloadUrl,
-        );
-        await widget.services.care.saveSuccessStory(story);
       }
-      if (mounted) Navigator.pop(context);
+      final story = SuccessStory(
+        id: widget.story?.id ?? '',
+        shelterId: widget.shelter.id,
+        adminId: widget.user.uid,
+        title: _title.text,
+        story: _story.text,
+        published: _published,
+        photoPath: uploadedMedia?.path ?? widget.story?.photoPath,
+        photoUrl: uploadedMedia?.downloadUrl ?? widget.story?.photoUrl,
+        createdAt: widget.story?.createdAt,
+      );
+      await widget.services.care.saveSuccessStory(story);
+      if (uploadedMedia != null && widget.story?.photoPath != null) {
+        await widget.services.media.delete(widget.story!.photoPath!);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _published
+                  ? 'Story saved and published to the gallery.'
+                  : 'Private draft saved. Publish it when it is ready.',
+            ),
+          ),
+        );
+        Navigator.pop(context);
+      }
     } on Object catch (error) {
       if (mounted) {
         _show(
@@ -328,6 +509,31 @@ class _StoryFormState extends State<_StoryForm> {
   void _show(String message) => ScaffoldMessenger.of(
     context,
   ).showSnackBar(SnackBar(content: Text(message)));
+
+  String? _required(String? value) =>
+      value == null || value.trim().isEmpty ? 'This field is required.' : null;
+}
+
+class _StoryPhotoPlaceholder extends StatelessWidget {
+  const _StoryPhotoPlaceholder();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 210,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      color: AppColors.peachLight,
+      borderRadius: BorderRadius.circular(22),
+    ),
+    child: const Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.photo_library_outlined, size: 42),
+        SizedBox(height: 8),
+        Text('Add a happy-ending photo'),
+      ],
+    ),
+  );
 }
 
 enum CommunityModule { volunteer, contact }

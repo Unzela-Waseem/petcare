@@ -593,7 +593,11 @@ class FirebaseCareRepository implements CareRepository {
           .map(_storyFromDoc)
           .where((story) => shelterId == null || story.shelterId == shelterId)
           .toList();
-      stories.sort((a, b) => a.title.compareTo(b.title));
+      stories.sort(
+        (a, b) => (b.updatedAt ?? b.createdAt ?? DateTime(1970)).compareTo(
+          a.updatedAt ?? a.createdAt ?? DateTime(1970),
+        ),
+      );
       return stories;
     });
   }
@@ -1031,6 +1035,8 @@ class FirebaseCareRepository implements CareRepository {
       published: data['published'] as bool? ?? false,
       photoPath: data['photoPath'] as String?,
       photoUrl: data['photoUrl'] as String?,
+      createdAt: _nullableDate(data['createdAt']),
+      updatedAt: _nullableDate(data['updatedAt']),
     );
   }
 

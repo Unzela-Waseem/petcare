@@ -11,6 +11,7 @@ import '../../../domain/models/care_models.dart';
 import '../../../domain/models/user_role.dart';
 import '../../../domain/repositories/care_repository.dart';
 import '../../../domain/repositories/media_storage_service.dart';
+import 'shelter_operations_screen.dart';
 
 class AdoptionListingsScreen extends StatefulWidget {
   const AdoptionListingsScreen({
@@ -100,10 +101,22 @@ class _AdoptionListingsScreenState extends State<AdoptionListingsScreen> {
       if (!_isAdmin)
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 2),
-          child: OutlinedButton.icon(
-            onPressed: _openMyRequests,
-            icon: const Icon(Icons.assignment_turned_in_outlined),
-            label: const Text('My Adoption Requests'),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _openMyRequests,
+                icon: const Icon(Icons.assignment_turned_in_outlined),
+                label: const Text('My Requests'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _openSuccessStories,
+                icon: const Icon(Icons.auto_awesome_outlined),
+                label: const Text('Success Stories'),
+              ),
+            ],
           ),
         ),
       Expanded(
@@ -237,6 +250,16 @@ class _AdoptionListingsScreenState extends State<AdoptionListingsScreen> {
     MaterialPageRoute<void>(
       builder: (_) =>
           AdoptionRequestsScreen(user: widget.user, services: widget.services),
+    ),
+  );
+
+  Future<void> _openSuccessStories() => Navigator.of(context).push<void>(
+    MaterialPageRoute<void>(
+      builder: (_) => SuccessStoriesScreen(
+        user: widget.user,
+        services: widget.services,
+        galleryOnly: true,
+      ),
     ),
   );
 

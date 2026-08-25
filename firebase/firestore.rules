@@ -539,13 +539,37 @@ service cloud.firestore {
       allow create: if hasRole('shelterAdmin')
         && request.resource.data.adminId == request.auth.uid
         && ownsShelter(request.resource.data.shelterId)
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.story is string
+        && request.resource.data.story.size() > 0
+        && request.resource.data.published is bool
+        && (
+          request.resource.data.published == false
+          || (
+            request.resource.data.photoUrl is string
+            && request.resource.data.photoUrl.size() > 0
+          )
+        )
         && request.resource.data.keys().hasOnly([
           'shelterId', 'adminId', 'title', 'story', 'published',
           'photoPath', 'photoUrl', 'createdAt', 'updatedAt'
         ]);
       allow update: if ownsShelter(resource.data.shelterId)
         && request.resource.data.shelterId == resource.data.shelterId
-        && request.resource.data.adminId == resource.data.adminId;
+        && request.resource.data.adminId == resource.data.adminId
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.story is string
+        && request.resource.data.story.size() > 0
+        && request.resource.data.published is bool
+        && (
+          request.resource.data.published == false
+          || (
+            request.resource.data.photoUrl is string
+            && request.resource.data.photoUrl.size() > 0
+          )
+        );
       allow delete: if ownsShelter(resource.data.shelterId);
     }
 
