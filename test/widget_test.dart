@@ -18,7 +18,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Care that feels\nlike family.'), findsOneWidget);
-    expect(find.text('Next'), findsOneWidget);
+    expect(find.text('Next →'), findsOneWidget);
   });
 
   testWidgets('demo role access routes to the selected protected dashboard', (

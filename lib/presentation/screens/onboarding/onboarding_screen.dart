@@ -70,8 +70,8 @@ class _PageData {
     this.tags = const [],
     this.cardBorderColor,
     this.bgBlobs = const [],
-    this.isNetworkImage = false,       // ← NEW
-    this.networkImageUrl,               // ← NEW
+    this.isNetworkImage = false, // ← NEW
+    this.networkImageUrl, // ← NEW
   });
 
   final String title;
@@ -90,8 +90,8 @@ class _PageData {
   final List<String> tags;
   final Color? cardBorderColor;
   final List<_BgBlob> bgBlobs;
-  final bool isNetworkImage;            // ← NEW
-  final String? networkImageUrl;        // ← NEW
+  final bool isNetworkImage; // ← NEW
+  final String? networkImageUrl; // ← NEW
 }
 
 class OnboardingScreen extends StatefulWidget {
@@ -131,13 +131,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       subtitle:
           'Bring your favourite pet home and give it the love, comfort, and companionship it deserves.',
       cardHeading: 'Find your furry best friend',
-      imagePath: 'assets/images/image.png',                                                // ← not used
+      imagePath: 'assets/images/image.png', // ← not used
       bgColor: Color(0xFFF6ECFC),
       accentColor: Color(0xFFC48BE8),
       badgeIcon: Icons.pets_rounded,
       badgeIconColor: Colors.white,
       isDarkBg: false,
-     
+
       imageFit: BoxFit.cover,
       imageScale: 1.15,
       imagePadding: 10,
@@ -172,26 +172,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       ],
       tags: ['Friendly', 'Loyal', 'Playful'],
       bgBlobs: [
-        _BgBlob(
-          color: Color(0x26C48BE8),
-          size: 180,
-          top: -40,
-          right: -30,
-        ),
-        _BgBlob(
-          color: Color(0x33E8B4F8),
-          size: 120,
-          bottom: 100,
-          left: -40,
-        ),
+        _BgBlob(color: Color(0x26C48BE8), size: 180, top: -40, right: -30),
+        _BgBlob(color: Color(0x33E8B4F8), size: 120, bottom: 100, left: -40),
       ],
     ),
 
     // ── Page 3 (Cat – Orange/dark theme – unchanged) ───────────────
     _PageData(
       title: 'Homey\nPet \u{1F43E}',
-      subtitle:
-          'Build a bond between your pets and the people who love them.',
+      subtitle: 'Build a bond between your pets and the people who love them.',
       cardHeading: 'Take care of your pet',
       imagePath: 'assets/images/pawfect_pet_family_cutout.png',
       bgColor: Color(0xFFFA8F3D),
@@ -234,18 +223,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       ],
       tags: ['Cozy', 'Loving', 'Warm'],
       bgBlobs: [
-        _BgBlob(
-          color: Color(0x1AFFFFFF),
-          size: 200,
-          top: -50,
-          left: -50,
-        ),
-        _BgBlob(
-          color: Color(0x26FFD93D),
-          size: 140,
-          bottom: 80,
-          right: -35,
-        ),
+        _BgBlob(color: Color(0x1AFFFFFF), size: 200, top: -50, left: -50),
+        _BgBlob(color: Color(0x26FFD93D), size: 140, bottom: 80, right: -35),
       ],
     ),
   ];
@@ -328,17 +307,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           margin: const EdgeInsets.only(right: 6),
                           decoration: BoxDecoration(
                             color: active
-                                ? (isColoredBg
-                                    ? Colors.white
-                                    : AppColors.ink)
+                                ? (isColoredBg ? Colors.white : AppColors.ink)
                                 : (isColoredBg
-<<<<<<< HEAD
-                                      ? Colors.white.withValues(alpha: 0.4)
-                                      : AppColors.ink.withValues(alpha: 0.15)),
-=======
-                                    ? Color(0x66FFFFFF)
-                                    : Color(0x26111B21)),
->>>>>>> f295240 (Update onboarding and splash screens)
+                                      ? Color(0x66FFFFFF)
+                                      : Color(0x26111B21)),
                             borderRadius: BorderRadius.circular(10),
                           ),
                         );
@@ -388,7 +360,6 @@ class _OnboardPage extends StatelessWidget {
     final size = MediaQuery.sizeOf(context);
     final compact = size.height < 720;
 
-<<<<<<< HEAD
     final fadeAnim = CurvedAnimation(
       parent: animController,
       curve: Curves.easeIn,
@@ -398,137 +369,30 @@ class _OnboardPage extends StatelessWidget {
           CurvedAnimation(parent: animController, curve: Curves.easeOutCubic),
         );
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: FadeTransition(
-        opacity: fadeAnim,
-        child: SlideTransition(
-          position: slideAnim,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 52),
-              // ── Title row ──────────────────────────────────
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      data.title,
-                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                        fontSize: compact ? 34 : 40,
-                        height: 1.1,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Container(
-                    margin: const EdgeInsets.only(top: 6),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: data.accentColor,
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    child: Icon(
-                      data.badgeIcon,
-                      color: AppColors.orangeDeep,
-                      size: 24,
-                    ),
-                  ),
-                ],
-              ),
-              // ── Image card ─────────────────────────────────
-              Expanded(
-                child: _ClassicImageCard(data: data, index: index),
-              ),
-              const SizedBox(height: 14),
-              // ── Info card ──────────────────────────────────
-              _ClassicInfoCard(data: data),
-              const SizedBox(height: 10),
-              // ── Next button ────────────────────────────────
-              PawButton(label: 'Next', onPressed: onNext),
-              const SizedBox(height: 24),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Purple Card Page (Page 2) ─────────────────────────────────────────────────
-class _PurpleCardPage extends StatelessWidget {
-  const _PurpleCardPage({
-    required this.data,
-    required this.animController,
-    required this.isCurrent,
-    required this.onNext,
-  });
-
-  final _PageData data;
-  final AnimationController animController;
-  final bool isCurrent;
-  final VoidCallback onNext;
-
-  @override
-  Widget build(BuildContext context) {
-    final size = MediaQuery.sizeOf(context);
-    final fadeAnim = CurvedAnimation(
-      parent: animController,
-      curve: Curves.easeIn,
-    );
-    final slideAnim =
-        Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero).animate(
-          CurvedAnimation(parent: animController, curve: Curves.easeOutCubic),
-        );
-=======
-    final fadeAnim =
-        CurvedAnimation(parent: animController, curve: Curves.easeIn);
-    final slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-        parent: animController, curve: Curves.easeOutCubic));
-
     final titleColor = data.isDarkBg ? Colors.white : AppColors.ink;
->>>>>>> f295240 (Update onboarding and splash screens)
 
     return FadeTransition(
       opacity: fadeAnim,
       child: SlideTransition(
         position: slideAnim,
-<<<<<<< HEAD
-        child: Container(
-          color: Colors.white,
-          child: Column(
-            children: [
-              // ── Purple gradient card with dog image ──────────
-              Container(
-                height: size.height * 0.52,
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0xFFE8C5F8), Color(0xFFC48BE8)],
-=======
         child: Stack(
           children: [
-            ...data.bgBlobs.map((blob) => Positioned(
-                  top: blob.top,
-                  right: blob.right,
-                  left: blob.left,
-                  bottom: blob.bottom,
-                  child: Container(
-                    width: blob.size,
-                    height: blob.size,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: blob.color,
-                    ),
->>>>>>> f295240 (Update onboarding and splash screens)
+            ...data.bgBlobs.map(
+              (blob) => Positioned(
+                top: blob.top,
+                right: blob.right,
+                left: blob.left,
+                bottom: blob.bottom,
+                child: Container(
+                  width: blob.size,
+                  height: blob.size,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: blob.color,
                   ),
-                )),
+                ),
+              ),
+            ),
 
             Positioned.fill(
               child: Padding(
@@ -544,9 +408,7 @@ class _PurpleCardPage extends StatelessWidget {
                         Expanded(
                           child: Text(
                             data.title,
-                            style: Theme.of(context)
-                                .textTheme
-                                .displayLarge
+                            style: Theme.of(context).textTheme.displayLarge
                                 ?.copyWith(
                                   fontSize: compact ? 34 : 40,
                                   height: 1.1,
@@ -564,8 +426,11 @@ class _PurpleCardPage extends StatelessWidget {
                                 : data.accentColor,
                             borderRadius: BorderRadius.circular(22),
                           ),
-                          child: Icon(data.badgeIcon,
-                              color: data.badgeIconColor, size: 24),
+                          child: Icon(
+                            data.badgeIcon,
+                            color: data.badgeIconColor,
+                            size: 24,
+                          ),
                         ),
                       ],
                     ),
@@ -577,8 +442,9 @@ class _PurpleCardPage extends StatelessWidget {
                         clipBehavior: Clip.none,
                         children: [
                           _OnboardImageCard(data: data),
-                          ...data.floatingBadges
-                              .map((b) => _FloatingBadgeWidget(badge: b)),
+                          ...data.floatingBadges.map(
+                            (b) => _FloatingBadgeWidget(badge: b),
+                          ),
                         ],
                       ),
                     ),
@@ -604,79 +470,8 @@ class _PurpleCardPage extends StatelessWidget {
                   ],
                 ),
               ),
-<<<<<<< HEAD
-              const SizedBox(height: 32),
-              // ── Title ─────────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 28),
-                child: Text(
-                  data.title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF1A1A2E),
-                    height: 1.2,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              // ── Subtitle ──────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: Text(
-                  data.subtitle,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF7A7A9D),
-                    height: 1.6,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              // ── Next button ───────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(28, 0, 28, 36),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: ElevatedButton(
-                    onPressed: onNext,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFC48BE8),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      elevation: 4,
-                      shadowColor: const Color(
-                        0xFFC48BE8,
-                      ).withValues(alpha: 0.4),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Next',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Icon(Icons.arrow_forward_rounded, size: 20),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-=======
             ),
           ],
->>>>>>> f295240 (Update onboarding and splash screens)
         ),
       ),
     );
@@ -690,96 +485,14 @@ class _OnboardImageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
-    final size = MediaQuery.sizeOf(context);
-    final fadeAnim = CurvedAnimation(
-      parent: animController,
-      curve: Curves.easeIn,
-    );
-    final slideAnim =
-        Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero).animate(
-          CurvedAnimation(parent: animController, curve: Curves.easeOutCubic),
-        );
-
-    return FadeTransition(
-      opacity: fadeAnim,
-      child: SlideTransition(
-        position: slideAnim,
-        child: Container(
-          color: AppColors.cream,
-          alignment: Alignment.center,
-          padding: EdgeInsets.symmetric(
-            horizontal: size.width < 520 ? 10 : 28,
-            vertical: 12,
-          ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: 440,
-              maxHeight: size.height - 24,
-            ),
-            child: AspectRatio(
-              aspectRatio: 182 / 378,
-              child: LayoutBuilder(
-                builder: (context, card) => ClipRRect(
-                  borderRadius: BorderRadius.circular(30),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.asset(data.imagePath, fit: BoxFit.fill),
-                      Positioned(
-                        left: card.maxWidth * (40 / 182),
-                        right: card.maxWidth * (40 / 182),
-                        bottom: card.maxHeight * (27 / 378),
-                        height: card.maxHeight * (30 / 378),
-                        child: Semantics(
-                          button: true,
-                          label: 'Get Started',
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(30),
-                              onTap: onComplete,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Classic Image card ────────────────────────────────────────────────────────
-class _ClassicImageCard extends StatelessWidget {
-  const _ClassicImageCard({required this.data, required this.index});
-  final _PageData data;
-  final int index;
-
-  @override
-  Widget build(BuildContext context) {
-=======
     final dotColor = data.isDarkBg ? Colors.white : data.accentColor;
     final cardColors = data.isDarkBg
-        ? [
-            Color(0x38FFFFFF),
-            Color(0x1AFFFFFF),
-          ]
-        : [
-            Color(0x8CACCEA8),
-            Color(0x40ACCEA8),
-          ];
-    final shadowColor =
-        data.isDarkBg ? Color(0x2E000000) : Color(0x80ACCEA8);
+        ? [Color(0x38FFFFFF), Color(0x1AFFFFFF)]
+        : [Color(0x8CACCEA8), Color(0x40ACCEA8)];
+    final shadowColor = data.isDarkBg ? Color(0x2E000000) : Color(0x80ACCEA8);
 
     final hasBorder = data.cardBorderColor != null;
 
->>>>>>> f295240 (Update onboarding and splash screens)
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -822,8 +535,11 @@ class _ClassicImageCard extends StatelessWidget {
                             errorBuilder: (_, __, ___) => Container(
                               color: Color(0xFFF6ECFC),
                               child: const Center(
-                                child: Icon(Icons.pets_rounded,
-                                    size: 60, color: Color(0xFFC48BE8)),
+                                child: Icon(
+                                  Icons.pets_rounded,
+                                  size: 60,
+                                  color: Color(0xFFC48BE8),
+                                ),
                               ),
                             ),
                           )
@@ -880,19 +596,22 @@ class _FloatingBadgeWidget extends StatelessWidget {
               : null,
           alignment: Alignment.center,
           child: hasLabel
-              ? Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(badge.icon, color: badge.fgColor, size: 15),
-                  const SizedBox(width: 5),
-                  Text(
-                    badge.label!,
-                    style: TextStyle(
-                      color: badge.fgColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.2,
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(badge.icon, color: badge.fgColor, size: 15),
+                    const SizedBox(width: 5),
+                    Text(
+                      badge.label!,
+                      style: TextStyle(
+                        color: badge.fgColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.2,
+                      ),
                     ),
-                  ),
-                ])
+                  ],
+                )
               : Icon(badge.icon, color: badge.fgColor, size: 20),
         ),
       ),
