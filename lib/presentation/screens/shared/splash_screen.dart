@@ -444,12 +444,12 @@ class _SplashScreenState extends State<SplashScreen>
   Widget _buildPetHero(double width) {
     final mobile = width < 600;
     final heroWidth = mobile
-        ? width * 0.60
+        ? width * 0.37
         : (width * 0.32).clamp(320.0, 430.0).toDouble();
 
     return Positioned(
-      right: mobile ? width * 0.20 : width * 0.08,
-      bottom: mobile ? 68 : 48,
+      right: mobile ? 8 : width * 0.08,
+      bottom: mobile ? 78 : 48,
       width: heroWidth,
       child: AnimatedBuilder(
         animation: Listenable.merge([_seq, _glowPulse]),
