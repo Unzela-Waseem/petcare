@@ -103,6 +103,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     with SingleTickerProviderStateMixin {
   final _controller = PageController();
   int _page = 0;
+  bool _imagesPrecached = false;
 
   late final AnimationController _pageAnim;
 
@@ -202,15 +203,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       title: 'Homey\nPet \u{1F43E}',
       subtitle: 'Build a bond between your pets and the people who love them.',
       cardHeading: 'Take care of your pet',
-      imagePath: 'assets/images/onboarding_cat_cutout.png',
+      imagePath: 'assets/images/onboarding_cat_studio.png',
       bgColor: Color(0xFFFA8F3D),
       accentColor: Colors.white,
       badgeIcon: Icons.groups_rounded,
       badgeIconColor: Color(0xFFFA8F3D),
       isDarkBg: true,
-      imageFit: BoxFit.contain,
-      imageScale: 1.15,
-      imagePadding: 4,
+      imageFit: BoxFit.cover,
+      imageScale: 1,
+      imagePadding: 0,
       cardBorderColor: Color(0x59FFFFFF),
       imageCardColors: [Color(0xFFFFBE7B), Color(0xFFFFE0B2)],
       floatingBadges: [
@@ -259,6 +260,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       duration: const Duration(milliseconds: 600),
       value: 1.0,
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_imagesPrecached) return;
+    _imagesPrecached = true;
+    for (final page in _pages) {
+      precacheImage(AssetImage(page.imagePath), context);
+    }
   }
 
   @override
