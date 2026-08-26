@@ -15,7 +15,6 @@ class _FloatingBadge {
     required this.bgColor,
     this.fgColor = Colors.white,
     this.size = 44,
-    this.elevation = 6,
     this.rotation = 0.0,
   });
 
@@ -28,7 +27,6 @@ class _FloatingBadge {
   final Color bgColor;
   final Color fgColor;
   final double size;
-  final double elevation;
   final double rotation;
 }
 
@@ -70,8 +68,7 @@ class _PageData {
     this.tags = const [],
     this.cardBorderColor,
     this.bgBlobs = const [],
-    this.isNetworkImage = false, // ← NEW
-    this.networkImageUrl, // ← NEW
+    this.imageCardColors = const [Color(0xFFFFE5CB), Color(0xFFFFF7EE)],
   });
 
   final String title;
@@ -90,8 +87,7 @@ class _PageData {
   final List<String> tags;
   final Color? cardBorderColor;
   final List<_BgBlob> bgBlobs;
-  final bool isNetworkImage; // ← NEW
-  final String? networkImageUrl; // ← NEW
+  final List<Color> imageCardColors;
 }
 
 class OnboardingScreen extends StatefulWidget {
@@ -111,37 +107,61 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   late final AnimationController _pageAnim;
 
   static const _pages = [
-    // ── Page 1 (unchanged) ────────────────────────────────────────
+    // ── Page 1 ────────────────────────────────────────────────────
     _PageData(
       title: 'Care that feels\nlike family.',
       subtitle:
           'Everything your companion needs, together in one gentle place.',
       cardHeading: 'Your pet, perfectly cared for',
-      imagePath: 'assets/images/pawfect_pet_family_cutout.png',
+      imagePath: 'assets/images/image.png',
       bgColor: Color(0xFFFFF5E6),
       accentColor: AppColors.peachLight,
       badgeIcon: Icons.favorite_rounded,
       badgeIconColor: AppColors.orangeDeep,
       isDarkBg: false,
+      imageScale: 0.94,
+      imagePadding: 8,
+      imageCardColors: [Color(0xFFFFD8B8), Color(0xFFFFF1E4)],
+      floatingBadges: [
+        _FloatingBadge(
+          icon: Icons.health_and_safety_rounded,
+          top: 16,
+          left: -10,
+          bgColor: Color(0xFF54B788),
+          size: 42,
+          rotation: -0.10,
+        ),
+        _FloatingBadge(
+          icon: Icons.favorite_rounded,
+          label: 'Loved',
+          bottom: 22,
+          right: -10,
+          bgColor: Color(0xFFFF7B52),
+          size: 44,
+          rotation: 0.08,
+        ),
+      ],
+      tags: ['Health', 'Love', 'Care'],
     ),
 
-    // ── Page 2 (Dog+Cat – network image) ──────────────────────────
+    // ── Page 2 ────────────────────────────────────────────────────
     _PageData(
       title: 'Get your\nfavourite pets',
       subtitle:
           'Bring your favourite pet home and give it the love, comfort, and companionship it deserves.',
       cardHeading: 'Find your furry best friend',
-      imagePath: 'assets/images/image.png', // ← not used
+      imagePath: 'assets/images/pawfect_pet_family_cutout.png',
       bgColor: Color(0xFFF6ECFC),
       accentColor: Color(0xFFC48BE8),
       badgeIcon: Icons.pets_rounded,
       badgeIconColor: Colors.white,
       isDarkBg: false,
 
-      imageFit: BoxFit.cover,
-      imageScale: 1.15,
-      imagePadding: 10,
+      imageFit: BoxFit.contain,
+      imageScale: 0.96,
+      imagePadding: 4,
       cardBorderColor: Colors.white,
+      imageCardColors: [Color(0xFFE4C7F3), Color(0xFFF8EEFC)],
       floatingBadges: [
         _FloatingBadge(
           icon: Icons.favorite_rounded,
@@ -177,20 +197,22 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       ],
     ),
 
-    // ── Page 3 (Cat – Orange/dark theme – unchanged) ───────────────
+    // ── Page 3 ────────────────────────────────────────────────────
     _PageData(
       title: 'Homey\nPet \u{1F43E}',
       subtitle: 'Build a bond between your pets and the people who love them.',
       cardHeading: 'Take care of your pet',
-      imagePath: 'assets/images/pawfect_pet_family_cutout.png',
+      imagePath: 'assets/images/onboarding_cat_cutout.png',
       bgColor: Color(0xFFFA8F3D),
       accentColor: Colors.white,
       badgeIcon: Icons.groups_rounded,
       badgeIconColor: Color(0xFFFA8F3D),
       isDarkBg: true,
-      imageFit: BoxFit.cover,
-      imagePadding: 10,
+      imageFit: BoxFit.contain,
+      imageScale: 1.15,
+      imagePadding: 4,
       cardBorderColor: Color(0x59FFFFFF),
+      imageCardColors: [Color(0xFFFFBE7B), Color(0xFFFFE0B2)],
       floatingBadges: [
         _FloatingBadge(
           icon: Icons.home_rounded,
@@ -486,9 +508,7 @@ class _OnboardImageCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dotColor = data.isDarkBg ? Colors.white : data.accentColor;
-    final cardColors = data.isDarkBg
-        ? [Color(0x38FFFFFF), Color(0x1AFFFFFF)]
-        : [Color(0x8CACCEA8), Color(0x40ACCEA8)];
+    final cardColors = data.imageCardColors;
     final shadowColor = data.isDarkBg ? Color(0x2E000000) : Color(0x80ACCEA8);
 
     final hasBorder = data.cardBorderColor != null;
@@ -522,32 +542,30 @@ class _OnboardImageCard extends StatelessWidget {
             ),
             Positioned.fill(
               child: Padding(
-                padding: EdgeInsets.all(data.imagePadding),
+                padding: EdgeInsets.fromLTRB(
+                  data.imagePadding,
+                  data.imagePadding,
+                  data.imagePadding,
+                  0,
+                ),
                 child: ClipRect(
                   child: Transform.scale(
                     scale: data.imageScale,
-                    // ── ONLY CHANGE: network vs asset ──────────
-                    child: data.isNetworkImage
-                        ? Image.network(
-                            data.networkImageUrl!,
-                            fit: data.imageFit,
-                            semanticLabel: data.cardHeading,
-                            errorBuilder: (_, __, ___) => Container(
-                              color: Color(0xFFF6ECFC),
-                              child: const Center(
-                                child: Icon(
-                                  Icons.pets_rounded,
-                                  size: 60,
-                                  color: Color(0xFFC48BE8),
-                                ),
-                              ),
-                            ),
-                          )
-                        : Image.asset(
-                            data.imagePath,
-                            fit: data.imageFit,
-                            semanticLabel: data.cardHeading,
-                          ),
+                    alignment: Alignment.bottomCenter,
+                    child: Image.asset(
+                      data.imagePath,
+                      fit: data.imageFit,
+                      alignment: Alignment.bottomCenter,
+                      filterQuality: FilterQuality.high,
+                      semanticLabel: data.cardHeading,
+                      errorBuilder: (_, _, _) => Center(
+                        child: Icon(
+                          Icons.pets_rounded,
+                          size: 64,
+                          color: data.accentColor,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
