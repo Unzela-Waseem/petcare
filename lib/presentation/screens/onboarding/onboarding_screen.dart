@@ -3,7 +3,55 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/paw_button.dart';
 
-// ── Per-page configuration ─────────────────────────────────────────────────────
+// ── Floating badge configuration ─────────────────────────────────────────
+class _FloatingBadge {
+  const _FloatingBadge({
+    required this.icon,
+    this.label,
+    this.top,
+    this.right,
+    this.left,
+    this.bottom,
+    required this.bgColor,
+    this.fgColor = Colors.white,
+    this.size = 44,
+    this.elevation = 6,
+    this.rotation = 0.0,
+  });
+
+  final IconData icon;
+  final String? label;
+  final double? top;
+  final double? right;
+  final double? left;
+  final double? bottom;
+  final Color bgColor;
+  final Color fgColor;
+  final double size;
+  final double elevation;
+  final double rotation;
+}
+
+// ── Background blob configuration ────────────────────────────────────────
+class _BgBlob {
+  const _BgBlob({
+    required this.color,
+    required this.size,
+    this.top,
+    this.right,
+    this.left,
+    this.bottom,
+  });
+
+  final Color color;
+  final double size;
+  final double? top;
+  final double? right;
+  final double? left;
+  final double? bottom;
+}
+
+// ── Per-page configuration ──────────────────────────────────────────────
 class _PageData {
   const _PageData({
     required this.title,
@@ -13,7 +61,17 @@ class _PageData {
     required this.bgColor,
     required this.accentColor,
     required this.badgeIcon,
-    required this.style,
+    required this.badgeIconColor,
+    required this.isDarkBg,
+    this.imageFit = BoxFit.contain,
+    this.imageScale = 1.0,
+    this.imagePadding = 16,
+    this.floatingBadges = const [],
+    this.tags = const [],
+    this.cardBorderColor,
+    this.bgBlobs = const [],
+    this.isNetworkImage = false,       // ← NEW
+    this.networkImageUrl,               // ← NEW
   });
 
   final String title;
@@ -23,10 +81,18 @@ class _PageData {
   final Color bgColor;
   final Color accentColor;
   final IconData badgeIcon;
-  final _PageStyle style;
+  final Color badgeIconColor;
+  final bool isDarkBg;
+  final BoxFit imageFit;
+  final double imageScale;
+  final double imagePadding;
+  final List<_FloatingBadge> floatingBadges;
+  final List<String> tags;
+  final Color? cardBorderColor;
+  final List<_BgBlob> bgBlobs;
+  final bool isNetworkImage;            // ← NEW
+  final String? networkImageUrl;        // ← NEW
 }
-
-enum _PageStyle { classic, purpleCard, orangeCard }
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({required this.onComplete, super.key});
@@ -42,10 +108,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   final _controller = PageController();
   int _page = 0;
 
-  // Page animation controller
   late final AnimationController _pageAnim;
 
   static const _pages = [
+    // ── Page 1 (unchanged) ────────────────────────────────────────
     _PageData(
       title: 'Care that feels\nlike family.',
       subtitle:
@@ -55,28 +121,132 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       bgColor: Color(0xFFFFF5E6),
       accentColor: AppColors.peachLight,
       badgeIcon: Icons.favorite_rounded,
-      style: _PageStyle.classic,
+      badgeIconColor: AppColors.orangeDeep,
+      isDarkBg: false,
     ),
+
+    // ── Page 2 (Dog+Cat – network image) ──────────────────────────
     _PageData(
-      title: 'Get your Favourite pets',
+      title: 'Get your\nfavourite pets',
       subtitle:
-          'Bring your favourite pet to your home. Adopt pet of your choice to get company or entertainment, pets comfort us and give us companionship.',
-      cardHeading: '',
-      imagePath: 'assets/images/onboarding_dog_head.png',
-      bgColor: Colors.white,
+          'Bring your favourite pet home and give it the love, comfort, and companionship it deserves.',
+      cardHeading: 'Find your furry best friend',
+      imagePath: 'assets/images/image.png',                                                // ← not used
+      bgColor: Color(0xFFF6ECFC),
       accentColor: Color(0xFFC48BE8),
       badgeIcon: Icons.pets_rounded,
-      style: _PageStyle.purpleCard,
+      badgeIconColor: Colors.white,
+      isDarkBg: false,
+     
+      imageFit: BoxFit.cover,
+      imageScale: 1.15,
+      imagePadding: 10,
+      cardBorderColor: Colors.white,
+      floatingBadges: [
+        _FloatingBadge(
+          icon: Icons.favorite_rounded,
+          top: -8,
+          right: -8,
+          bgColor: Color(0xFFFF6B8A),
+          size: 44,
+          rotation: 0.18,
+        ),
+        _FloatingBadge(
+          icon: Icons.pets_rounded,
+          top: 55,
+          left: -12,
+          bgColor: Color(0xFFC48BE8),
+          size: 40,
+          rotation: -0.12,
+        ),
+        _FloatingBadge(
+          icon: Icons.star_rounded,
+          label: 'Adopt',
+          bottom: 25,
+          right: -10,
+          bgColor: Color(0xFF9B59B6),
+          fgColor: Colors.white,
+          size: 44,
+          rotation: -0.08,
+        ),
+      ],
+      tags: ['Friendly', 'Loyal', 'Playful'],
+      bgBlobs: [
+        _BgBlob(
+          color: Color(0x26C48BE8),
+          size: 180,
+          top: -40,
+          right: -30,
+        ),
+        _BgBlob(
+          color: Color(0x33E8B4F8),
+          size: 120,
+          bottom: 100,
+          left: -40,
+        ),
+      ],
     ),
+
+    // ── Page 3 (Cat – Orange/dark theme – unchanged) ───────────────
     _PageData(
       title: 'Homey\nPet \u{1F43E}',
-      subtitle: 'Make your bonding relationship between pets & humans',
-      cardHeading: 'Take Care Of\nYour Pet',
-      imagePath: 'assets/images/onboarding_cat_orange.png',
+      subtitle:
+          'Build a bond between your pets and the people who love them.',
+      cardHeading: 'Take care of your pet',
+      imagePath: 'assets/images/pawfect_pet_family_cutout.png',
       bgColor: Color(0xFFFA8F3D),
-      accentColor: Color(0xFFFA8F3D),
+      accentColor: Colors.white,
       badgeIcon: Icons.groups_rounded,
-      style: _PageStyle.orangeCard,
+      badgeIconColor: Color(0xFFFA8F3D),
+      isDarkBg: true,
+      imageFit: BoxFit.cover,
+      imagePadding: 10,
+      cardBorderColor: Color(0x59FFFFFF),
+      floatingBadges: [
+        _FloatingBadge(
+          icon: Icons.home_rounded,
+          top: -8,
+          right: -8,
+          bgColor: Colors.white,
+          fgColor: Color(0xFFFA8F3D),
+          size: 44,
+          rotation: 0.14,
+        ),
+        _FloatingBadge(
+          icon: Icons.favorite_rounded,
+          bottom: 65,
+          left: -12,
+          bgColor: Color(0xEBFFFFFF),
+          fgColor: Color.fromARGB(255, 163, 81, 71),
+          size: 38,
+          rotation: 0.10,
+        ),
+        _FloatingBadge(
+          icon: Icons.auto_awesome_rounded,
+          label: 'Love',
+          bottom: 18,
+          right: -10,
+          bgColor: Color(0xFFFFD93D),
+          fgColor: Color(0xFF8B6914),
+          size: 44,
+          rotation: -0.14,
+        ),
+      ],
+      tags: ['Cozy', 'Loving', 'Warm'],
+      bgBlobs: [
+        _BgBlob(
+          color: Color(0x1AFFFFFF),
+          size: 200,
+          top: -50,
+          left: -50,
+        ),
+        _BgBlob(
+          color: Color(0x26FFD93D),
+          size: 140,
+          bottom: 80,
+          right: -35,
+        ),
+      ],
     ),
   ];
 
@@ -102,10 +272,21 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _pageAnim.forward(from: 0.0);
   }
 
+  void _next() {
+    if (_page == _pages.length - 1) {
+      widget.onComplete();
+      return;
+    }
+    _controller.nextPage(
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentPage = _pages[_page];
-    final isColoredBg = currentPage.style == _PageStyle.orangeCard;
+    final isColoredBg = currentPage.isDarkBg;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 500),
@@ -113,47 +294,22 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       child: SafeArea(
         child: Stack(
           children: [
-            // ── Page content (fullscreen) ─────────────────────
             PageView.builder(
               controller: _controller,
               onPageChanged: _onPageChanged,
               itemCount: _pages.length,
               itemBuilder: (context, index) {
                 final data = _pages[index];
-                switch (data.style) {
-                  case _PageStyle.classic:
-                    return _ClassicPage(
-                      data: data,
-                      index: index,
-                      animController: _pageAnim,
-                      isCurrent: index == _page,
-                      onNext: () => _controller.nextPage(
-                        duration: const Duration(milliseconds: 400),
-                        curve: Curves.easeOutCubic,
-                      ),
-                    );
-                  case _PageStyle.purpleCard:
-                    return _PurpleCardPage(
-                      data: data,
-                      animController: _pageAnim,
-                      isCurrent: index == _page,
-                      onNext: () => _controller.nextPage(
-                        duration: const Duration(milliseconds: 400),
-                        curve: Curves.easeOutCubic,
-                      ),
-                    );
-                  case _PageStyle.orangeCard:
-                    return _OrangeCardPage(
-                      data: data,
-                      animController: _pageAnim,
-                      isCurrent: index == _page,
-                      onComplete: widget.onComplete,
-                    );
-                }
+                final isLast = index == _pages.length - 1;
+                return _OnboardPage(
+                  data: data,
+                  animController: _pageAnim,
+                  buttonLabel: isLast ? 'Get Started' : 'Next →',
+                  onNext: _next,
+                );
               },
             ),
 
-            // ── Top bar (overlaid on all pages) ──────────────
             Positioned(
               top: 0,
               left: 0,
@@ -172,28 +328,36 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           margin: const EdgeInsets.only(right: 6),
                           decoration: BoxDecoration(
                             color: active
-                                ? (isColoredBg ? Colors.white : AppColors.ink)
+                                ? (isColoredBg
+                                    ? Colors.white
+                                    : AppColors.ink)
                                 : (isColoredBg
+<<<<<<< HEAD
                                       ? Colors.white.withValues(alpha: 0.4)
                                       : AppColors.ink.withValues(alpha: 0.15)),
+=======
+                                    ? Color(0x66FFFFFF)
+                                    : Color(0x26111B21)),
+>>>>>>> f295240 (Update onboarding and splash screens)
                             borderRadius: BorderRadius.circular(10),
                           ),
                         );
                       }),
                     ),
                     const Spacer(),
-                    TextButton(
-                      onPressed: widget.onComplete,
-                      child: Text(
-                        'Skip',
-                        style: TextStyle(
-                          color: isColoredBg
-                              ? Colors.white.withValues(alpha: 0.85)
-                              : AppColors.muted,
-                          fontWeight: FontWeight.w700,
+                    if (_page != _pages.length - 1)
+                      TextButton(
+                        onPressed: widget.onComplete,
+                        child: Text(
+                          'Skip',
+                          style: TextStyle(
+                            color: isColoredBg
+                                ? Color(0xD9FFFFFF)
+                                : AppColors.muted,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -205,20 +369,18 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 }
 
-// ── Classic Page (Page 1) ─────────────────────────────────────────────────────
-class _ClassicPage extends StatelessWidget {
-  const _ClassicPage({
+// ── Shared onboarding page layout ──────────────────────────────────────
+class _OnboardPage extends StatelessWidget {
+  const _OnboardPage({
     required this.data,
-    required this.index,
     required this.animController,
-    required this.isCurrent,
+    required this.buttonLabel,
     required this.onNext,
   });
 
   final _PageData data;
-  final int index;
   final AnimationController animController;
-  final bool isCurrent;
+  final String buttonLabel;
   final VoidCallback onNext;
 
   @override
@@ -226,6 +388,7 @@ class _ClassicPage extends StatelessWidget {
     final size = MediaQuery.sizeOf(context);
     final compact = size.height < 720;
 
+<<<<<<< HEAD
     final fadeAnim = CurvedAnimation(
       parent: animController,
       curve: Curves.easeIn,
@@ -318,11 +481,23 @@ class _PurpleCardPage extends StatelessWidget {
         Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero).animate(
           CurvedAnimation(parent: animController, curve: Curves.easeOutCubic),
         );
+=======
+    final fadeAnim =
+        CurvedAnimation(parent: animController, curve: Curves.easeIn);
+    final slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.08),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+        parent: animController, curve: Curves.easeOutCubic));
+
+    final titleColor = data.isDarkBg ? Colors.white : AppColors.ink;
+>>>>>>> f295240 (Update onboarding and splash screens)
 
     return FadeTransition(
       opacity: fadeAnim,
       child: SlideTransition(
         position: slideAnim,
+<<<<<<< HEAD
         child: Container(
           color: Colors.white,
           child: Column(
@@ -336,26 +511,100 @@ class _PurpleCardPage extends StatelessWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [Color(0xFFE8C5F8), Color(0xFFC48BE8)],
+=======
+        child: Stack(
+          children: [
+            ...data.bgBlobs.map((blob) => Positioned(
+                  top: blob.top,
+                  right: blob.right,
+                  left: blob.left,
+                  bottom: blob.bottom,
+                  child: Container(
+                    width: blob.size,
+                    height: blob.size,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: blob.color,
+                    ),
+>>>>>>> f295240 (Update onboarding and splash screens)
                   ),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(40),
-                    bottomRight: Radius.circular(40),
-                  ),
-                ),
-                child: Stack(
-                  alignment: Alignment.bottomCenter,
+                )),
+
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Positioned(
-                      bottom: 0,
-                      child: Image.asset(
-                        data.imagePath,
-                        height: size.height * 0.44,
-                        fit: BoxFit.contain,
+                    const SizedBox(height: 52),
+
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            data.title,
+                            style: Theme.of(context)
+                                .textTheme
+                                .displayLarge
+                                ?.copyWith(
+                                  fontSize: compact ? 34 : 40,
+                                  height: 1.1,
+                                  color: titleColor,
+                                ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Container(
+                          margin: const EdgeInsets.only(top: 6),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: data.isDarkBg
+                                ? Color(0xE6FFFFFF)
+                                : data.accentColor,
+                            borderRadius: BorderRadius.circular(22),
+                          ),
+                          child: Icon(data.badgeIcon,
+                              color: data.badgeIconColor, size: 24),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    Expanded(
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          _OnboardImageCard(data: data),
+                          ...data.floatingBadges
+                              .map((b) => _FloatingBadgeWidget(badge: b)),
+                        ],
                       ),
                     ),
+
+                    if (data.tags.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      _TagsRow(
+                        tags: data.tags,
+                        accentColor: data.accentColor,
+                        isDarkBg: data.isDarkBg,
+                      ),
+                    ],
+
+                    const SizedBox(height: 14),
+
+                    _OnboardInfoCard(data: data),
+
+                    const SizedBox(height: 10),
+
+                    PawButton(label: buttonLabel, onPressed: onNext),
+
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
+<<<<<<< HEAD
               const SizedBox(height: 32),
               // ── Title ─────────────────────────────────────────
               Padding(
@@ -424,28 +673,24 @@ class _PurpleCardPage extends StatelessWidget {
               ),
             ],
           ),
+=======
+            ),
+          ],
+>>>>>>> f295240 (Update onboarding and splash screens)
         ),
       ),
     );
   }
 }
 
-// ── Orange Card Page (Page 3) ─────────────────────────────────────────────────
-class _OrangeCardPage extends StatelessWidget {
-  const _OrangeCardPage({
-    required this.data,
-    required this.animController,
-    required this.isCurrent,
-    required this.onComplete,
-  });
-
+// ── Onboard image card ─────────────────────────────────────────────────
+class _OnboardImageCard extends StatelessWidget {
+  const _OnboardImageCard({required this.data});
   final _PageData data;
-  final AnimationController animController;
-  final bool isCurrent;
-  final Future<void> Function() onComplete;
 
   @override
   Widget build(BuildContext context) {
+<<<<<<< HEAD
     final size = MediaQuery.sizeOf(context);
     final fadeAnim = CurvedAnimation(
       parent: animController,
@@ -518,6 +763,23 @@ class _ClassicImageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+=======
+    final dotColor = data.isDarkBg ? Colors.white : data.accentColor;
+    final cardColors = data.isDarkBg
+        ? [
+            Color(0x38FFFFFF),
+            Color(0x1AFFFFFF),
+          ]
+        : [
+            Color(0x8CACCEA8),
+            Color(0x40ACCEA8),
+          ];
+    final shadowColor =
+        data.isDarkBg ? Color(0x2E000000) : Color(0x80ACCEA8);
+
+    final hasBorder = data.cardBorderColor != null;
+
+>>>>>>> f295240 (Update onboarding and splash screens)
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -525,33 +787,52 @@ class _ClassicImageCard extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            data.accentColor.withValues(alpha: 0.55),
-            data.accentColor.withValues(alpha: 0.25),
-          ],
+          colors: cardColors,
         ),
+        border: hasBorder
+            ? Border.all(color: data.cardBorderColor!, width: 2.5)
+            : null,
         boxShadow: [
           BoxShadow(
-            color: data.accentColor.withValues(alpha: 0.5),
+            color: shadowColor,
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(hasBorder ? 30 : 32),
         child: Stack(
           children: [
             Positioned.fill(
-              child: CustomPaint(painter: _DotPatternPainter(data.accentColor)),
+              child: CustomPaint(painter: _DotPatternPainter(dotColor)),
             ),
-            Center(
+            Positioned.fill(
               child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Image.asset(
-                  data.imagePath,
-                  fit: BoxFit.contain,
-                  semanticLabel: 'A cat and dog together',
+                padding: EdgeInsets.all(data.imagePadding),
+                child: ClipRect(
+                  child: Transform.scale(
+                    scale: data.imageScale,
+                    // ── ONLY CHANGE: network vs asset ──────────
+                    child: data.isNetworkImage
+                        ? Image.network(
+                            data.networkImageUrl!,
+                            fit: data.imageFit,
+                            semanticLabel: data.cardHeading,
+                            errorBuilder: (_, __, ___) => Container(
+                              color: Color(0xFFF6ECFC),
+                              child: const Center(
+                                child: Icon(Icons.pets_rounded,
+                                    size: 60, color: Color(0xFFC48BE8)),
+                              ),
+                            ),
+                          )
+                        : Image.asset(
+                            data.imagePath,
+                            fit: data.imageFit,
+                            semanticLabel: data.cardHeading,
+                          ),
+                  ),
                 ),
               ),
             ),
@@ -562,9 +843,109 @@ class _ClassicImageCard extends StatelessWidget {
   }
 }
 
-// ── Classic Info card ────────────────────────────────────────────────────────
-class _ClassicInfoCard extends StatelessWidget {
-  const _ClassicInfoCard({required this.data});
+// ── Floating badge widget ───────────────────────────────────────────────
+class _FloatingBadgeWidget extends StatelessWidget {
+  const _FloatingBadgeWidget({required this.badge});
+  final _FloatingBadge badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasLabel = badge.label != null;
+
+    return Positioned(
+      top: badge.top,
+      right: badge.right,
+      left: badge.left,
+      bottom: badge.bottom,
+      child: Transform.rotate(
+        angle: badge.rotation,
+        child: Container(
+          decoration: BoxDecoration(
+            color: badge.bgColor,
+            shape: hasLabel ? BoxShape.rectangle : BoxShape.circle,
+            borderRadius: hasLabel ? BorderRadius.circular(20) : null,
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x24000000),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          constraints: hasLabel
+              ? null
+              : BoxConstraints.tight(Size(badge.size, badge.size)),
+          padding: hasLabel
+              ? const EdgeInsets.symmetric(horizontal: 14, vertical: 8)
+              : null,
+          alignment: Alignment.center,
+          child: hasLabel
+              ? Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(badge.icon, color: badge.fgColor, size: 15),
+                  const SizedBox(width: 5),
+                  Text(
+                    badge.label!,
+                    style: TextStyle(
+                      color: badge.fgColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ])
+              : Icon(badge.icon, color: badge.fgColor, size: 20),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Tag pills row ───────────────────────────────────────────────────────
+class _TagsRow extends StatelessWidget {
+  const _TagsRow({
+    required this.tags,
+    required this.accentColor,
+    required this.isDarkBg,
+  });
+
+  final List<String> tags;
+  final Color accentColor;
+  final bool isDarkBg;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: tags.map((tag) {
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+          decoration: BoxDecoration(
+            color: isDarkBg ? Color(0x33FFFFFF) : Color(0x24C48BE8),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isDarkBg ? Color(0x4DFFFFFF) : Color(0x47C48BE8),
+              width: 1.2,
+            ),
+          ),
+          child: Text(
+            tag,
+            style: TextStyle(
+              color: isDarkBg ? Colors.white : accentColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.1,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+// ── Onboard info card ───────────────────────────────────────────────────
+class _OnboardInfoCard extends StatelessWidget {
+  const _OnboardInfoCard({required this.data});
   final _PageData data;
 
   @override
@@ -577,7 +958,7 @@ class _ClassicInfoCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
+            color: Color(0x0F000000),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -589,7 +970,7 @@ class _ClassicInfoCard extends StatelessWidget {
             width: 4,
             height: 48,
             decoration: BoxDecoration(
-              color: data.accentColor,
+              color: data.isDarkBg ? data.bgColor : data.accentColor,
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -620,7 +1001,7 @@ class _ClassicInfoCard extends StatelessWidget {
   }
 }
 
-// ── Dot pattern painter ───────────────────────────────────────────────────────
+// ── Dot pattern painter ─────────────────────────────────────────────────
 class _DotPatternPainter extends CustomPainter {
   _DotPatternPainter(this.color);
   final Color color;
