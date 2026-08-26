@@ -51,7 +51,9 @@ class _PawfectCareAppState extends State<PawfectCareApp> {
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
           home: switch (controller.stage) {
-            AuthStage.initializing => const SplashScreen(),
+            AuthStage.initializing => SplashScreen(
+              onComplete: controller.skipSplash,
+            ),
             AuthStage.onboarding => OnboardingScreen(
               onComplete: controller.completeOnboarding,
             ),

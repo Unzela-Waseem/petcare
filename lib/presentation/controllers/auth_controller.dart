@@ -27,6 +27,7 @@ class AuthController extends ChangeNotifier {
   final AuthRepository _authRepository;
   final SessionStore _sessionStore;
   final PushNotificationService _pushNotifications;
+  final Completer<void> _splashSkip = Completer<void>();
 
   AuthStage stage = AuthStage.initializing;
   AppUser? user;
@@ -35,7 +36,10 @@ class AuthController extends ChangeNotifier {
 
   Future<void> initialize() async {
     // Keep the branded splash visible long enough after the web app boots.
-    final splashTimer = Future<void>.delayed(const Duration(seconds: 5));
+    final splashTimer = Future.any<void>([
+      Future<void>.delayed(const Duration(seconds: 5)),
+      _splashSkip.future,
+    ]);
     try {
       final onboardingComplete = await _sessionStore.hasCompletedOnboarding();
       if (!onboardingComplete) {
@@ -57,6 +61,10 @@ class AuthController extends ChangeNotifier {
       stage = AuthStage.signedOut;
     }
     notifyListeners();
+  }
+
+  void skipSplash() {
+    if (!_splashSkip.isCompleted) _splashSkip.complete();
   }
 
   Future<void> completeOnboarding() async {
