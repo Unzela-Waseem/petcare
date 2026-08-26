@@ -34,8 +34,8 @@ class AuthController extends ChangeNotifier {
   bool busy = false;
 
   Future<void> initialize() async {
-    // Minimum splash screen display time (3 seconds)
-    final splashTimer = Future<void>.delayed(const Duration(seconds: 3));
+    // Keep the branded splash visible long enough after the web app boots.
+    final splashTimer = Future<void>.delayed(const Duration(seconds: 5));
     try {
       final onboardingComplete = await _sessionStore.hasCompletedOnboarding();
       if (!onboardingComplete) {

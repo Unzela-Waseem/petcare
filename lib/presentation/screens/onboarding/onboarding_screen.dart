@@ -658,17 +658,19 @@ class _TagsRow extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: 5),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
           decoration: BoxDecoration(
-            color: isDarkBg ? Color(0x33FFFFFF) : Color(0x24C48BE8),
+            color: isDarkBg ? Color(0x33FFFFFF) : Color(0xCCFFFFFF),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isDarkBg ? Color(0x4DFFFFFF) : Color(0x47C48BE8),
+              color: isDarkBg
+                  ? Color(0x4DFFFFFF)
+                  : accentColor.withValues(alpha: 0.42),
               width: 1.2,
             ),
           ),
           child: Text(
             tag,
             style: TextStyle(
-              color: isDarkBg ? Colors.white : accentColor,
+              color: isDarkBg ? Colors.white : AppColors.ink,
               fontSize: 12,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.1,

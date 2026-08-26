@@ -35,7 +35,7 @@ class _SplashScreenState extends State<SplashScreen>
     )..repeat(reverse: true);
     _progressController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 3),
+      duration: const Duration(seconds: 5),
     )..forward();
 
     _fade = CurvedAnimation(
