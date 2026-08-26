@@ -242,6 +242,10 @@ class _SplashScreenState extends State<SplashScreen>
               // Particles.
               ..._particles.map((p) => _ParticleWidget(p: p, ctrl: _float)),
 
+              // Friendly pet hero fills the open area without changing the
+              // original typography or loading treatment.
+              _buildPetHero(w),
+
               // Main content.
               Positioned(
                 top: h * 0.075,
@@ -432,6 +436,67 @@ class _SplashScreenState extends State<SplashScreen>
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: RadialGradient(colors: [color, Colors.transparent]),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPetHero(double width) {
+    final mobile = width < 600;
+    final heroWidth = mobile
+        ? width * 0.60
+        : (width * 0.32).clamp(320.0, 430.0).toDouble();
+
+    return Positioned(
+      right: mobile ? width * 0.20 : width * 0.08,
+      bottom: mobile ? 68 : 48,
+      width: heroWidth,
+      child: AnimatedBuilder(
+        animation: Listenable.merge([_seq, _glowPulse]),
+        builder: (context, child) {
+          final floatY = (_glowPulse.value - 0.5) * 9;
+          return Opacity(
+            opacity: _chipOp.value,
+            child: Transform.translate(
+              offset: Offset(0, floatY),
+              child: Transform.scale(scale: _pawSc.value, child: child),
+            ),
+          );
+        },
+        child: Stack(
+          alignment: Alignment.bottomCenter,
+          children: [
+            Positioned(
+              left: heroWidth * 0.05,
+              right: heroWidth * 0.05,
+              bottom: 4,
+              height: heroWidth * 0.58,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      _gold.withValues(alpha: 0.34),
+                      _peach.withValues(alpha: 0.08),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Image.asset(
+              'assets/images/image.png',
+              width: heroWidth,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
+              semanticLabel: 'Happy dog and cat',
+              errorBuilder: (_, _, _) => Icon(
+                Icons.pets_rounded,
+                size: heroWidth * 0.45,
+                color: _orangeDeep,
+              ),
+            ),
+          ],
         ),
       ),
     );
