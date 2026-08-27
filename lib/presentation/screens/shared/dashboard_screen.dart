@@ -14,13 +14,11 @@ class DashboardScreen extends StatefulWidget {
   const DashboardScreen({
     required this.user,
     required this.services,
-    this.onMenu,
     super.key,
   });
 
   final AppUser user;
   final AppServices services;
-  final VoidCallback? onMenu;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -49,7 +47,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 _Header(
                   user: widget.user,
                   services: widget.services,
-                  onMenu: widget.onMenu,
                   onNotifications: () => _openFeature(
                     context,
                     FeatureCatalog.forRole(
@@ -66,13 +63,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     suffixIcon: Icon(Icons.tune_rounded),
                   ),
                 ),
-                if (query.isEmpty) ...[
-                  const SizedBox(height: 18),
-                  _QuickAccessStrip(
-                    role: widget.user.role,
-                    onOpen: (feature) => _openFeature(context, feature),
-                  ),
-                ] else ...[
+                const SizedBox(height: 18),
+                _RoleChips(role: widget.user.role),
+                if (query.isNotEmpty) ...[
                   const SizedBox(height: 18),
                   _SearchDestinations(
                     query: query,
@@ -250,12 +243,10 @@ class _Header extends StatelessWidget {
     required this.user,
     required this.services,
     required this.onNotifications,
-    this.onMenu,
   });
   final AppUser user;
   final AppServices services;
   final VoidCallback onNotifications;
-  final VoidCallback? onMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -265,19 +256,6 @@ class _Header extends StatelessWidget {
         : nameParts.first;
     return Row(
       children: [
-        if (onMenu != null) ...[
-          IconButton.filled(
-            tooltip: 'Open menu',
-            style: IconButton.styleFrom(
-              backgroundColor: AppColors.ink,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(46, 46),
-            ),
-            onPressed: onMenu,
-            icon: const Icon(Icons.menu_rounded),
-          ),
-          const SizedBox(width: 12),
-        ],
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -336,113 +314,67 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _QuickAccessStrip extends StatelessWidget {
-  const _QuickAccessStrip({required this.role, required this.onOpen});
-
+class _RoleChips extends StatelessWidget {
+  const _RoleChips({required this.role});
   final UserRole role;
-  final ValueChanged<FeatureAction> onOpen;
 
   @override
   Widget build(BuildContext context) {
-    final titles = switch (role) {
+    final labels = switch (role) {
       UserRole.petOwner => const [
-        'My Pets',
-        'Health Records',
-        'Appointments',
-        'Adoption',
+        (Icons.pets_rounded, 'Pets'),
+        (Icons.health_and_safety_outlined, 'Health'),
+        (Icons.medical_services_outlined, 'Vets'),
+        (Icons.favorite_outline_rounded, 'Adopt'),
       ],
       UserRole.veterinarian => const [
-        "Today's Appointments",
-        'Assigned Pets',
-        'Medical Records',
-        'Calendar',
+        (Icons.today_outlined, 'Today'),
+        (Icons.pets_outlined, 'Patients'),
+        (Icons.history_rounded, 'History'),
+        (Icons.schedule_outlined, 'Slots'),
       ],
       UserRole.shelterAdmin => const [
-        'Pet Listings',
-        'Adoption Requests',
-        'Volunteer Requests',
-        'Success Stories',
+        (Icons.pets_outlined, 'Listings'),
+        (Icons.favorite_outline_rounded, 'Requests'),
+        (Icons.groups_outlined, 'People'),
+        (Icons.auto_awesome_outlined, 'Stories'),
       ],
     };
-    final catalog = FeatureCatalog.forRole(role);
-    final actions = titles
-        .map((title) => catalog.firstWhere((item) => item.title == title))
-        .toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              'Quick access',
-              style: Theme.of(context).textTheme.titleMedium,
+    return SizedBox(
+      height: 76,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: labels.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          final selected = index == 0;
+          return Container(
+            width: 82,
+            padding: const EdgeInsets.symmetric(vertical: 9),
+            decoration: BoxDecoration(
+              color: selected ? AppColors.orange : AppColors.surface,
+              borderRadius: BorderRadius.circular(28),
+              border: selected ? null : Border.all(color: AppColors.border),
             ),
-            const Spacer(),
-            const Text(
-              'Role-secured tools',
-              style: TextStyle(
-                color: AppColors.muted,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          height: 94,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: actions.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 10),
-            itemBuilder: (context, index) {
-              final feature = actions[index];
-              return InkWell(
-                onTap: () => onOpen(feature),
-                borderRadius: BorderRadius.circular(22),
-                child: Ink(
-                  width: 190,
-                  padding: const EdgeInsets.all(13),
-                  decoration: BoxDecoration(
-                    color: feature.color,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: .8),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: const BoxDecoration(
-                          color: AppColors.surface,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(feature.icon, size: 21),
-                      ),
-                      const SizedBox(width: 11),
-                      Expanded(
-                        child: Text(
-                          feature.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            height: 1.15,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                      const Icon(Icons.arrow_outward_rounded, size: 16),
-                    ],
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(labels[index].$1, size: 22),
+                const SizedBox(height: 4),
+                Text(
+                  labels[index].$2,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-              );
-            },
-          ),
-        ),
-      ],
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }

@@ -66,64 +66,6 @@ service cloud.firestore {
         && get(shelterPath(shelterId)).data.adminId == request.auth.uid;
     }
 
-    function adoptionListingPath(listingId) {
-      return /databases/$(database)/documents/adoptionListings/$(listingId);
-    }
-
-    function ownsAdoptionListing(listingId) {
-      return hasRole('shelterAdmin')
-        && exists(adoptionListingPath(listingId))
-        && get(adoptionListingPath(listingId)).data.adminId == request.auth.uid;
-    }
-
-    function validPublicPetProfile(data) {
-      return data.keys().hasOnly([
-          'sourceId', 'sourceType', 'managerId', 'petName', 'species',
-          'breed', 'age', 'gender', 'photoUrl', 'description', 'allergies',
-          'emergencyNotes', 'contactName', 'contactPhone', 'isLost',
-          'active', 'createdAt', 'updatedAt'
-        ])
-        && data.managerId == request.auth.uid
-        && data.sourceId is string
-        && data.sourceId.size() > 0
-        && data.sourceType in ['ownedPet', 'shelterListing']
-        && data.petName is string
-        && data.petName.size() > 0
-        && data.petName.size() <= 100
-        && data.species is string
-        && data.species.size() <= 80
-        && data.breed is string
-        && data.breed.size() <= 100
-        && data.age is int
-        && data.age >= 0
-        && data.age <= 80
-        && data.gender is string
-        && (data.photoUrl == null || data.photoUrl is string)
-        && data.description is string
-        && data.description.size() <= 1000
-        && data.allergies is string
-        && data.allergies.size() <= 250
-        && data.emergencyNotes is string
-        && data.emergencyNotes.size() <= 350
-        && data.contactName is string
-        && data.contactName.size() <= 80
-        && data.contactPhone is string
-        && data.contactPhone.size() <= 30
-        && data.isLost is bool
-        && data.active == true
-        && (
-          (
-            data.sourceType == 'ownedPet'
-            && hasRole('petOwner')
-            && isPetOwner(data.sourceId)
-          )
-          || (
-            data.sourceType == 'shelterListing'
-            && ownsAdoptionListing(data.sourceId)
-          )
-        );
-    }
-
     function appointmentPath(appointmentId) {
       return /databases/$(database)/documents/appointments/$(appointmentId);
     }
@@ -221,24 +163,6 @@ service cloud.firestore {
         ]);
       allow delete: if hasRole('petOwner')
         && resource.data.ownerId == request.auth.uid;
-    }
-
-    match /publicPetProfiles/{profileId} {
-      // A random document ID embedded in the QR allows a single safe public
-      // profile to be opened without exposing private pet collections.
-      allow get: if resource.data.active == true;
-      allow list: if isActive()
-        && resource.data.managerId == request.auth.uid;
-      allow create: if isActive()
-        && validPublicPetProfile(request.resource.data);
-      allow update: if isActive()
-        && resource.data.managerId == request.auth.uid
-        && request.resource.data.managerId == resource.data.managerId
-        && request.resource.data.sourceId == resource.data.sourceId
-        && request.resource.data.sourceType == resource.data.sourceType
-        && validPublicPetProfile(request.resource.data);
-      allow delete: if isActive()
-        && resource.data.managerId == request.auth.uid;
     }
 
     match /petAccess/{petId}/veterinarians/{vetId} {

@@ -82,31 +82,6 @@ async function seedData() {
       age: 3,
       gender: 'female',
     });
-    const publicPetProfile = {
-      sourceId: 'luna',
-      sourceType: 'ownedPet',
-      managerId: 'owner-a',
-      petName: 'Luna',
-      species: 'Dog',
-      breed: 'Husky',
-      age: 3,
-      gender: 'Female',
-      photoUrl: 'https://res.cloudinary.com/demo/image/upload/luna.jpg',
-      description: 'Friendly family dog',
-      allergies: 'Chicken',
-      emergencyNotes: 'Please approach slowly.',
-      contactName: 'Owner A',
-      contactPhone: '+92 300 0000000',
-      isLost: false,
-      active: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    await db.doc('publicPetProfiles/luna-public').set(publicPetProfile);
-    await db.doc('publicPetProfiles/luna-disabled').set({
-      ...publicPetProfile,
-      active: false,
-    });
     await db.doc('petAccess/luna/veterinarians/vet-a').set({
       petId: 'luna',
       veterinarianId: 'vet-a',
@@ -328,80 +303,6 @@ describe('PawfectCare Firestore authorization', () => {
   it('allows only the owning pet owner to read a pet', async () => {
     await assertSucceeds(authenticated('owner-a').doc('pets/luna').get());
     await assertFails(authenticated('owner-b').doc('pets/luna').get());
-  });
-
-  it('exposes only active QR pet profiles to signed-out scanners', async () => {
-    const publicDb = testEnv.unauthenticatedContext().firestore();
-    const profile = await assertSucceeds(
-      publicDb.doc('publicPetProfiles/luna-public').get(),
-    );
-    assert.equal(profile.data().petName, 'Luna');
-    await assertFails(publicDb.doc('publicPetProfiles/luna-disabled').get());
-    await assertFails(publicDb.collection('publicPetProfiles').get());
-  });
-
-  it('allows only the source manager to manage a QR pet profile', async () => {
-    const owner = authenticated('owner-a');
-    const managed = await assertSucceeds(
-      owner
-        .collection('publicPetProfiles')
-        .where('managerId', '==', 'owner-a')
-        .where('sourceType', '==', 'ownedPet')
-        .where('sourceId', '==', 'luna')
-        .get(),
-    );
-    assert.equal(managed.size, 2);
-    await assertSucceeds(
-      owner.doc('publicPetProfiles/luna-public').update({
-        isLost: true,
-        updatedAt: new Date(),
-      }),
-    );
-    await assertFails(
-      authenticated('owner-b').doc('publicPetProfiles/luna-public').update({
-        isLost: true,
-        updatedAt: new Date(),
-      }),
-    );
-  });
-
-  it('validates QR profile sources and rejects unexpected public fields', async () => {
-    const owner = authenticated('owner-a');
-    const profile = {
-      sourceId: 'luna',
-      sourceType: 'ownedPet',
-      managerId: 'owner-a',
-      petName: 'Luna',
-      species: 'Dog',
-      breed: 'Husky',
-      age: 3,
-      gender: 'Female',
-      photoUrl: null,
-      description: '',
-      allergies: '',
-      emergencyNotes: '',
-      contactName: '',
-      contactPhone: '',
-      isLost: false,
-      active: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    await assertSucceeds(
-      owner.doc('publicPetProfiles/new-owner-qr').set(profile),
-    );
-    await assertFails(
-      authenticated('owner-b').doc('publicPetProfiles/wrong-owner-qr').set({
-        ...profile,
-        managerId: 'owner-b',
-      }),
-    );
-    await assertFails(
-      owner.doc('publicPetProfiles/leaky-qr').set({
-        ...profile,
-        privateMedicalReport: 'must never be public',
-      }),
-    );
   });
 
   it('limits a veterinarian to explicitly assigned pets', async () => {

@@ -15,6 +15,7 @@ class _FloatingBadge {
     required this.bgColor,
     this.fgColor = Colors.white,
     this.size = 44,
+    this.elevation = 6,
     this.rotation = 0.0,
   });
 
@@ -27,6 +28,7 @@ class _FloatingBadge {
   final Color bgColor;
   final Color fgColor;
   final double size;
+  final double elevation;
   final double rotation;
 }
 
@@ -68,7 +70,8 @@ class _PageData {
     this.tags = const [],
     this.cardBorderColor,
     this.bgBlobs = const [],
-    this.imageCardColors = const [Color(0xFFFFE5CB), Color(0xFFFFF7EE)],
+    this.isNetworkImage = false,
+    this.networkImageUrl,
   });
 
   final String title;
@@ -87,11 +90,15 @@ class _PageData {
   final List<String> tags;
   final Color? cardBorderColor;
   final List<_BgBlob> bgBlobs;
-  final List<Color> imageCardColors;
+  final bool isNetworkImage;
+  final String? networkImageUrl;
 }
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({required this.onComplete, super.key});
+  const OnboardingScreen({
+    required this.onComplete,
+    super.key,
+  });
 
   final Future<void> Function() onComplete;
 
@@ -103,66 +110,40 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     with SingleTickerProviderStateMixin {
   final _controller = PageController();
   int _page = 0;
-  bool _imagesPrecached = false;
 
   late final AnimationController _pageAnim;
 
   static const _pages = [
-    // ── Page 1 ────────────────────────────────────────────────────
+    // ── Page 1 ─────────────────────────────────────────────────────
     _PageData(
       title: 'Care that feels\nlike family.',
       subtitle:
           'Everything your companion needs, together in one gentle place.',
       cardHeading: 'Your pet, perfectly cared for',
-      imagePath: 'assets/images/image.png',
+      imagePath: 'assets/images/pawfect_pet_family_cutout.png',
       bgColor: Color(0xFFFFF5E6),
       accentColor: AppColors.peachLight,
       badgeIcon: Icons.favorite_rounded,
       badgeIconColor: AppColors.orangeDeep,
       isDarkBg: false,
-      imageScale: 0.94,
-      imagePadding: 8,
-      imageCardColors: [Color(0xFFFFD8B8), Color(0xFFFFF1E4)],
-      floatingBadges: [
-        _FloatingBadge(
-          icon: Icons.health_and_safety_rounded,
-          top: 16,
-          left: -10,
-          bgColor: Color(0xFF54B788),
-          size: 42,
-          rotation: -0.10,
-        ),
-        _FloatingBadge(
-          icon: Icons.favorite_rounded,
-          label: 'Loved',
-          bottom: 22,
-          right: -10,
-          bgColor: Color(0xFFFF7B52),
-          size: 44,
-          rotation: 0.08,
-        ),
-      ],
-      tags: ['Health', 'Love', 'Care'],
     ),
 
-    // ── Page 2 ────────────────────────────────────────────────────
+    // ── Page 2 ─────────────────────────────────────────────────────
     _PageData(
       title: 'Get your\nfavourite pets',
       subtitle:
           'Bring your favourite pet home and give it the love, comfort, and companionship it deserves.',
       cardHeading: 'Find your furry best friend',
-      imagePath: 'assets/images/pawfect_pet_family_cutout.png',
+      imagePath: 'assets/images/image.png',
       bgColor: Color(0xFFF6ECFC),
       accentColor: Color(0xFFC48BE8),
       badgeIcon: Icons.pets_rounded,
       badgeIconColor: Colors.white,
       isDarkBg: false,
-
-      imageFit: BoxFit.contain,
-      imageScale: 0.96,
-      imagePadding: 4,
+      imageFit: BoxFit.cover,
+      imageScale: 1.15,
+      imagePadding: 10,
       cardBorderColor: Colors.white,
-      imageCardColors: [Color(0xFFE4C7F3), Color(0xFFF8EEFC)],
       floatingBadges: [
         _FloatingBadge(
           icon: Icons.favorite_rounded,
@@ -193,27 +174,36 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       ],
       tags: ['Friendly', 'Loyal', 'Playful'],
       bgBlobs: [
-        _BgBlob(color: Color(0x26C48BE8), size: 180, top: -40, right: -30),
-        _BgBlob(color: Color(0x33E8B4F8), size: 120, bottom: 100, left: -40),
+        _BgBlob(
+          color: Color(0x26C48BE8),
+          size: 180,
+          top: -40,
+          right: -30,
+        ),
+        _BgBlob(
+          color: Color(0x33E8B4F8),
+          size: 120,
+          bottom: 100,
+          left: -40,
+        ),
       ],
     ),
 
-    // ── Page 3 ────────────────────────────────────────────────────
+    // ── Page 3 ─────────────────────────────────────────────────────
     _PageData(
-      title: 'Homey\nPet \u{1F43E}',
-      subtitle: 'Build a bond between your pets and the people who love them.',
+      title: 'Homey\nPet 🐾',
+      subtitle:
+          'Build a bond between your pets and the people who love them.',
       cardHeading: 'Take care of your pet',
-      imagePath: 'assets/images/onboarding_cat_studio.png',
+      imagePath: 'assets/images/pawfect_pet_family_cutout.png',
       bgColor: Color(0xFFFA8F3D),
       accentColor: Colors.white,
       badgeIcon: Icons.groups_rounded,
       badgeIconColor: Color(0xFFFA8F3D),
       isDarkBg: true,
-      imageFit: BoxFit.contain,
-      imageScale: 0.96,
-      imagePadding: 0,
+      imageFit: BoxFit.cover,
+      imagePadding: 10,
       cardBorderColor: Color(0x59FFFFFF),
-      imageCardColors: [Color(0xFFFFBE7B), Color(0xFFFFE0B2)],
       floatingBadges: [
         _FloatingBadge(
           icon: Icons.home_rounded,
@@ -246,8 +236,18 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       ],
       tags: ['Cozy', 'Loving', 'Warm'],
       bgBlobs: [
-        _BgBlob(color: Color(0x1AFFFFFF), size: 200, top: -50, left: -50),
-        _BgBlob(color: Color(0x26FFD93D), size: 140, bottom: 80, right: -35),
+        _BgBlob(
+          color: Color(0x1AFFFFFF),
+          size: 200,
+          top: -50,
+          left: -50,
+        ),
+        _BgBlob(
+          color: Color(0x26FFD93D),
+          size: 140,
+          bottom: 80,
+          right: -35,
+        ),
       ],
     ),
   ];
@@ -255,21 +255,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   @override
   void initState() {
     super.initState();
+
     _pageAnim = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
       value: 1.0,
     );
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_imagesPrecached) return;
-    _imagesPrecached = true;
-    for (final page in _pages) {
-      precacheImage(AssetImage(page.imagePath), context);
-    }
   }
 
   @override
@@ -289,6 +280,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       widget.onComplete();
       return;
     }
+
     _controller.nextPage(
       duration: const Duration(milliseconds: 400),
       curve: Curves.easeOutCubic,
@@ -313,6 +305,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               itemBuilder: (context, index) {
                 final data = _pages[index];
                 final isLast = index == _pages.length - 1;
+
                 return _OnboardPage(
                   data: data,
                   animController: _pageAnim,
@@ -333,6 +326,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     Row(
                       children: List.generate(_pages.length, (i) {
                         final active = i == _page;
+
                         return AnimatedContainer(
                           duration: const Duration(milliseconds: 300),
                           width: active ? 28 : 8,
@@ -340,10 +334,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           margin: const EdgeInsets.only(right: 6),
                           decoration: BoxDecoration(
                             color: active
-                                ? (isColoredBg ? Colors.white : AppColors.ink)
+                                ? (isColoredBg
+                                    ? Colors.white
+                                    : AppColors.ink)
                                 : (isColoredBg
-                                      ? Color(0x66FFFFFF)
-                                      : Color(0x26111B21)),
+                                    ? Colors.white.withValues(alpha: 0.4)
+                                    : AppColors.ink
+                                        .withValues(alpha: 0.15)),
                             borderRadius: BorderRadius.circular(10),
                           ),
                         );
@@ -397,10 +394,16 @@ class _OnboardPage extends StatelessWidget {
       parent: animController,
       curve: Curves.easeIn,
     );
-    final slideAnim =
-        Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(
-          CurvedAnimation(parent: animController, curve: Curves.easeOutCubic),
-        );
+
+    final slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.08),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: animController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
 
     final titleColor = data.isDarkBg ? Colors.white : AppColors.ink;
 
@@ -435,13 +438,16 @@ class _OnboardPage extends StatelessWidget {
                   children: [
                     const SizedBox(height: 52),
 
+                    // ── Title row ───────────────────────────────
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: Text(
                             data.title,
-                            style: Theme.of(context).textTheme.displayLarge
+                            style: Theme.of(context)
+                                .textTheme
+                                .displayLarge
                                 ?.copyWith(
                                   fontSize: compact ? 34 : 40,
                                   height: 1.1,
@@ -470,6 +476,7 @@ class _OnboardPage extends StatelessWidget {
 
                     const SizedBox(height: 14),
 
+                    // ── Image card ──────────────────────────────
                     Expanded(
                       child: Stack(
                         clipBehavior: Clip.none,
@@ -482,6 +489,7 @@ class _OnboardPage extends StatelessWidget {
                       ),
                     ),
 
+                    // ── Tags ────────────────────────────────────
                     if (data.tags.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       _TagsRow(
@@ -493,11 +501,16 @@ class _OnboardPage extends StatelessWidget {
 
                     const SizedBox(height: 14),
 
+                    // ── Info card ───────────────────────────────
                     _OnboardInfoCard(data: data),
 
                     const SizedBox(height: 10),
 
-                    PawButton(label: buttonLabel, onPressed: onNext),
+                    // ── Next button ─────────────────────────────
+                    PawButton(
+                      label: buttonLabel,
+                      onPressed: onNext,
+                    ),
 
                     const SizedBox(height: 24),
                   ],
@@ -513,14 +526,28 @@ class _OnboardPage extends StatelessWidget {
 
 // ── Onboard image card ─────────────────────────────────────────────────
 class _OnboardImageCard extends StatelessWidget {
-  const _OnboardImageCard({required this.data});
+  const _OnboardImageCard({
+    required this.data,
+  });
+
   final _PageData data;
 
   @override
   Widget build(BuildContext context) {
     final dotColor = data.isDarkBg ? Colors.white : data.accentColor;
-    final cardColors = data.imageCardColors;
-    final shadowColor = data.isDarkBg ? Color(0x2E000000) : Color(0x80ACCEA8);
+
+    final cardColors = data.isDarkBg
+        ? [
+            Color(0x38FFFFFF),
+            Color(0x1AFFFFFF),
+          ]
+        : [
+            Color(0x8CACCEA8),
+            Color(0x40ACCEA8),
+          ];
+
+    final shadowColor =
+        data.isDarkBg ? Color(0x2E000000) : Color(0x80ACCEA8);
 
     final hasBorder = data.cardBorderColor != null;
 
@@ -534,7 +561,10 @@ class _OnboardImageCard extends StatelessWidget {
           colors: cardColors,
         ),
         border: hasBorder
-            ? Border.all(color: data.cardBorderColor!, width: 2.5)
+            ? Border.all(
+                color: data.cardBorderColor!,
+                width: 2.5,
+              )
             : null,
         boxShadow: [
           BoxShadow(
@@ -545,38 +575,63 @@ class _OnboardImageCard extends StatelessWidget {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(hasBorder ? 30 : 32),
+        borderRadius: BorderRadius.circular(
+          hasBorder ? 30 : 32,
+        ),
         child: Stack(
           children: [
             Positioned.fill(
-              child: CustomPaint(painter: _DotPatternPainter(dotColor)),
+              child: CustomPaint(
+                painter: _DotPatternPainter(dotColor),
+              ),
             ),
+
             Positioned.fill(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  data.imagePadding,
-                  data.imagePadding,
-                  data.imagePadding,
-                  0,
-                ),
+                padding: EdgeInsets.all(data.imagePadding),
                 child: ClipRect(
                   child: Transform.scale(
                     scale: data.imageScale,
-                    alignment: Alignment.bottomCenter,
-                    child: Image.asset(
-                      data.imagePath,
-                      fit: data.imageFit,
-                      alignment: Alignment.bottomCenter,
-                      filterQuality: FilterQuality.high,
-                      semanticLabel: data.cardHeading,
-                      errorBuilder: (_, _, _) => Center(
-                        child: Icon(
-                          Icons.pets_rounded,
-                          size: 64,
-                          color: data.accentColor,
-                        ),
-                      ),
-                    ),
+                    child: data.isNetworkImage &&
+                            data.networkImageUrl != null
+                        ? Image.network(
+                            data.networkImageUrl!,
+                            fit: data.imageFit,
+                            semanticLabel: data.cardHeading,
+                            errorBuilder: (_, __, ___) {
+                              return Container(
+                                color: Color(0xFFF6ECFC),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.pets_rounded,
+                                    size: 60,
+                                    color: Color(0xFFC48BE8),
+                                  ),
+                                ),
+                              );
+                            },
+                          )
+                        : Image.asset(
+                            data.imagePath,
+                            fit: data.imageFit,
+                            semanticLabel: data.cardHeading,
+                            errorBuilder: (_, __, ___) {
+                              return Container(
+                                color: data.isDarkBg
+                                    ? Color(0x33FFFFFF)
+                                    : Color(0xFFF6ECFC),
+                                child: Center(
+                                  child: Icon(
+                                    Icons.pets_rounded,
+                                    size: 60,
+                                    color: data.isDarkBg
+                                        ? Colors.white
+                                        : Color(0xFFC48BE8),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                   ),
                 ),
               ),
@@ -590,7 +645,10 @@ class _OnboardImageCard extends StatelessWidget {
 
 // ── Floating badge widget ───────────────────────────────────────────────
 class _FloatingBadgeWidget extends StatelessWidget {
-  const _FloatingBadgeWidget({required this.badge});
+  const _FloatingBadgeWidget({
+    required this.badge,
+  });
+
   final _FloatingBadge badge;
 
   @override
@@ -607,8 +665,11 @@ class _FloatingBadgeWidget extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: badge.bgColor,
-            shape: hasLabel ? BoxShape.rectangle : BoxShape.circle,
-            borderRadius: hasLabel ? BorderRadius.circular(20) : null,
+            shape: hasLabel
+                ? BoxShape.rectangle
+                : BoxShape.circle,
+            borderRadius:
+                hasLabel ? BorderRadius.circular(20) : null,
             boxShadow: [
               BoxShadow(
                 color: Color(0x24000000),
@@ -619,16 +680,25 @@ class _FloatingBadgeWidget extends StatelessWidget {
           ),
           constraints: hasLabel
               ? null
-              : BoxConstraints.tight(Size(badge.size, badge.size)),
+              : BoxConstraints.tight(
+                  Size(badge.size, badge.size),
+                ),
           padding: hasLabel
-              ? const EdgeInsets.symmetric(horizontal: 14, vertical: 8)
+              ? const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                )
               : null,
           alignment: Alignment.center,
           child: hasLabel
               ? Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(badge.icon, color: badge.fgColor, size: 15),
+                    Icon(
+                      badge.icon,
+                      color: badge.fgColor,
+                      size: 15,
+                    ),
                     const SizedBox(width: 5),
                     Text(
                       badge.label!,
@@ -641,7 +711,11 @@ class _FloatingBadgeWidget extends StatelessWidget {
                     ),
                   ],
                 )
-              : Icon(badge.icon, color: badge.fgColor, size: 20),
+              : Icon(
+                  badge.icon,
+                  color: badge.fgColor,
+                  size: 20,
+                ),
         ),
       ),
     );
@@ -667,21 +741,28 @@ class _TagsRow extends StatelessWidget {
       children: tags.map((tag) {
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 5),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 7,
+          ),
           decoration: BoxDecoration(
-            color: isDarkBg ? Color(0x33FFFFFF) : Color(0xCCFFFFFF),
+            color: isDarkBg
+                ? Color(0x33FFFFFF)
+                : Color(0x24C48BE8),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isDarkBg
                   ? Color(0x4DFFFFFF)
-                  : accentColor.withValues(alpha: 0.42),
+                  : Color(0x47C48BE8),
               width: 1.2,
             ),
           ),
           child: Text(
             tag,
             style: TextStyle(
-              color: isDarkBg ? Colors.white : AppColors.ink,
+              color: isDarkBg
+                  ? Colors.white
+                  : accentColor,
               fontSize: 12,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.1,
@@ -695,14 +776,20 @@ class _TagsRow extends StatelessWidget {
 
 // ── Onboard info card ───────────────────────────────────────────────────
 class _OnboardInfoCard extends StatelessWidget {
-  const _OnboardInfoCard({required this.data});
+  const _OnboardInfoCard({
+    required this.data,
+  });
+
   final _PageData data;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 20,
+        vertical: 18,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
@@ -720,27 +807,40 @@ class _OnboardInfoCard extends StatelessWidget {
             width: 4,
             height: 48,
             decoration: BoxDecoration(
-              color: data.isDarkBg ? data.bgColor : data.accentColor,
+              color: data.isDarkBg
+                  ? data.bgColor
+                  : data.accentColor,
               borderRadius: BorderRadius.circular(4),
             ),
           ),
+
           const SizedBox(width: 14),
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   data.cardHeading,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleMedium?.copyWith(fontSize: 15),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(
+                        fontSize: 15,
+                      ),
                 ),
+
                 const SizedBox(height: 4),
+
                 Text(
                   data.subtitle,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(fontSize: 12.5, height: 1.4),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(
+                        fontSize: 12.5,
+                        height: 1.4,
+                      ),
                 ),
               ],
             ),
@@ -754,6 +854,7 @@ class _OnboardInfoCard extends StatelessWidget {
 // ── Dot pattern painter ─────────────────────────────────────────────────
 class _DotPatternPainter extends CustomPainter {
   _DotPatternPainter(this.color);
+
   final Color color;
 
   @override
@@ -761,15 +862,25 @@ class _DotPatternPainter extends CustomPainter {
     final paint = Paint()
       ..color = color.withValues(alpha: 0.25)
       ..style = PaintingStyle.fill;
+
     const spacing = 22.0;
     const radius = 2.2;
+
     for (double x = 0; x < size.width + spacing; x += spacing) {
       for (double y = 0; y < size.height + spacing; y += spacing) {
-        canvas.drawCircle(Offset(x, y), radius, paint);
+        canvas.drawCircle(
+          Offset(x, y),
+          radius,
+          paint,
+        );
       }
     }
   }
 
   @override
-  bool shouldRepaint(covariant _DotPatternPainter old) => old.color != color;
+  bool shouldRepaint(
+    covariant _DotPatternPainter old,
+  ) {
+    return old.color != color;
+  }
 }

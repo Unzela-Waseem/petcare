@@ -10,7 +10,10 @@ import 'data/repositories/demo_auth_repository.dart';
 import 'data/repositories/demo_care_repository.dart';
 import 'data/repositories/firebase_auth_repository.dart';
 import 'data/repositories/firebase_care_repository.dart';
+import 'data/services/demo_chat_service.dart';
+import 'data/services/fallback_chat_service.dart';
 import 'data/services/firebase_media_storage_service.dart';
+import 'data/services/gemini_chat_service.dart';
 import 'data/services/firebase_push_notification_service.dart';
 import 'data/services/hybrid_media_storage_service.dart';
 import 'data/services/local_media_storage_service.dart';
@@ -59,8 +62,11 @@ Future<void> main() async {
               privateFiles: localMedia,
             )
           : localMedia,
-      offlineArticles: SharedPreferencesOfflineArticleService(),
+           offlineArticles: SharedPreferencesOfflineArticleService(),
       reminders: reminders,
+      chat: FallbackChatService(
+        primary: GeminiChatService(apiKey: AppEnvironment.geminiApiKey),
+      ),
     );
   } else {
     authRepository = DemoAuthRepository();
@@ -70,6 +76,7 @@ Future<void> main() async {
       media: const DemoMediaStorageService(),
       offlineArticles: SharedPreferencesOfflineArticleService(),
       reminders: const NoopReminderService(),
+      chat: DemoChatService(),
     );
   }
 

@@ -92,7 +92,6 @@ Server timestamps are used for every `createdAt` and `updatedAt`. IDs shown belo
 | `users/{uid}/devices/{deviceId}` | `userId`, `token`, `platform`, `updatedAt` | Private FCM registration-token records; deterministic token hashes are used as IDs. |
 | `publicProfiles/{uid}` | `uid`, `name`, `role`, `photoUrl`, `clinicName`, `specialty`, `location`, timestamps | Sanitized directory created atomically with the matching private role. |
 | `pets/{petId}` | `ownerId`, `name`, `species`, `breed`, `age`, `gender`, `description`, `photoPath`, `photoUrl`, timestamps | Owner-only mutation. Vet reads require an active appointment grant. |
-| `publicPetProfiles/{randomId}` | source/manager IDs, safe pet facts, `photoUrl`, optional allergies/emergency/contact fields, `isLost`, `active`, timestamps | Active document-get is public for normal-camera QR scans; collection listing is manager-only. Private medical/account fields are structurally rejected. Regeneration revokes the old random link. |
 | `petAccess/{petId}/veterinarians/{vetId}` | `petId`, `veterinarianId`, `appointmentId`, `active`, timestamps | Created/updated only in the same atomic operation as a rule-valid appointment. |
 | `petHealthRecords/{recordId}` | `petId`, `createdBy`, `veterinarianId`, `type`, clinical fields, notes/dates, `reportPaths`, timestamps | Owners manage non-clinical routine records; assigned vets manage attributable clinical records; shelters are denied. |
 | `appointments/{appointmentId}` | `slotId`, optional `rescheduledFrom`, pet/owner/vet IDs and display names, `dateTime`, `reason`, `status`, timestamps | IDs are unique and immutable. Booking/rescheduling is atomic with the slot and grant, allowing a released slot to be rebooked without replacing cancelled history. Party-specific transitions are validated. |
@@ -123,7 +122,6 @@ Legend: `own` means only a resource whose stored owner field equals `request.aut
 | Private user profile | Read/update allowed fields on self | Same | Same |
 | Change role/account status | Denied | Denied | Denied |
 | Pet profile | CRUD own | Read assigned | Denied |
-| QR pet identity | Manage own pet QR; public scan allowed by random link | Scan public link only | Manage own shelter-listing QR |
 | Health record | Read for own pet | Create/read/update assigned record | Denied |
 | Appointment | Create/read/cancel/reschedule own | Read/confirm/reschedule/complete assigned | Denied |
 | Vet availability | Read | CRUD own | Denied |

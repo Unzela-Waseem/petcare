@@ -10,7 +10,6 @@ import '../../../domain/models/pet.dart';
 import '../../../domain/models/user_role.dart';
 import '../appointments/appointments_screen.dart';
 import '../health/health_records_screen.dart';
-import 'pet_identity_screen.dart';
 
 class PetDetailScreen extends StatelessWidget {
   const PetDetailScreen({
@@ -96,27 +95,6 @@ class PetDetailScreen extends StatelessWidget {
                           : pet.description,
                     ),
                     const SizedBox(height: 24),
-                    if (user.role == UserRole.petOwner) ...[
-                      _CareCard(
-                        title: 'Pet QR Identity',
-                        detail:
-                            'Create a secure, scannable tag for ${pet.name}.',
-                        icon: Icons.qr_code_2_rounded,
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => PetIdentityScreen(
-                              user: user,
-                              services: services,
-                              seed: PetIdentitySeed.ownedPet(
-                                pet: pet,
-                                owner: user,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                    ],
                     StreamBuilder<List<HealthRecord>>(
                       stream: services.care.watchHealthRecords(pet.id),
                       builder: (context, snapshot) {
@@ -135,7 +113,6 @@ class PetDetailScreen extends StatelessWidget {
                           detail: record == null
                               ? 'Open the protected care timeline.'
                               : '${record.title} · ${_day(record.dueDate!)}',
-                          icon: Icons.vaccines_outlined,
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute<void>(
                               builder: (_) => HealthRecordsScreen(
@@ -227,12 +204,10 @@ class _CareCard extends StatelessWidget {
   const _CareCard({
     required this.title,
     required this.detail,
-    required this.icon,
     required this.onTap,
   });
   final String title;
   final String detail;
-  final IconData icon;
   final VoidCallback onTap;
 
   @override
@@ -247,9 +222,9 @@ class _CareCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
+          const CircleAvatar(
             backgroundColor: AppColors.peachLight,
-            child: Icon(icon, color: AppColors.orangeDeep),
+            child: Icon(Icons.vaccines_outlined, color: AppColors.orangeDeep),
           ),
           const SizedBox(width: 13),
           Expanded(

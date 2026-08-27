@@ -18,7 +18,6 @@ The UI follows a warm editorial pet-care system: cream canvases, peach feature p
 - Veterinarian directory search, atomic booking/cancellation/rescheduling, availability management, and appointment history
 - Product search/filter/wishlist/external HTTPS links, plus care-tip search/filter/bookmark/offline reading
 - Adoption listings/requests, shelter profiles, success stories, volunteer/donation requests, and shelter inquiries
-- Revocable QR pet identities for owned and shelter pets, with normal-camera scanning, a signed-out public safety profile, lost-pet status, optional emergency/contact details, and QR image sharing/download
 - Profile editing/photo, recent-login password changes, notification preferences, feedback, and Google Maps links
 - Firebase Authentication and private profile adapter
 - Firebase Cloud Messaging permission, token rotation, per-device storage, and logout cleanup
@@ -26,7 +25,7 @@ The UI follows a warm editorial pet-care system: cream canvases, peach feature p
 - Strict Firestore and Storage rules with deny-by-default behavior
 - Trusted Cloud Functions for appointment, vaccine, adoption, and blog notifications
 - Firestore composite indexes and seeded production store/care-tip content
-- Flutter unit/widget tests and 32 Firestore/Storage Emulator authorization tests
+- Flutter unit/widget tests and 20 Firestore/Storage Emulator authorization tests
 - A deterministic demo mode that never touches production data
 
 The complete architecture and security contract live in [`docs/architecture.md`](docs/architecture.md). The specification-by-specification completion evidence and remaining account-owner release actions are in [`docs/requirements-matrix.md`](docs/requirements-matrix.md).
@@ -101,8 +100,7 @@ still be overridden explicitly for another Firebase/Cloudinary environment:
 flutter run -d chrome \
   --dart-define=USE_FIREBASE=true \
   --dart-define=CLOUDINARY_CLOUD_NAME=dc1w5stzg \
-  --dart-define=CLOUDINARY_UPLOAD_PRESET=pawfactcare_unsigned \
-  --dart-define=PUBLIC_WEB_BASE_URL=https://pawfectcare-unzela-2026.web.app/
+  --dart-define=CLOUDINARY_UPLOAD_PRESET=pawfactcare_unsigned
 ```
 
 The preset must allow only JPG/JPEG/PNG/WebP images up to 5 MB, disallow caller-provided public IDs, generate unique IDs, and disable overwrite. An unsigned client cannot securely delete an older remote asset after its short-lived deletion window; deleting or replacing an image removes the Firestore reference immediately, while periodic asset cleanup is performed from Cloudinary Media Library until a trusted signed backend is available. API secrets must never be added to this repository or any Flutter build.
@@ -159,7 +157,7 @@ npm --prefix functions run check
 npm --prefix functions run lint
 ```
 
-The rules suites verify registration consistency, signed-out denial for private data, signed-out access to active QR safety profiles, QR manager/source validation, pet ownership isolation, routine-versus-clinical health fields, veterinarian assignment boundaries, atomic booking/rescheduling/cancellation, role escalation denial, catalog/notification server ownership, MIME/size restrictions, private medical files, and shelter isolation.
+The rules suites verify registration consistency, signed-out denial, pet ownership isolation, routine-versus-clinical health fields, veterinarian assignment boundaries, atomic booking/rescheduling/cancellation, role escalation denial, catalog/notification server ownership, MIME/size restrictions, private medical files, and shelter isolation.
 
 ## Security notes
 

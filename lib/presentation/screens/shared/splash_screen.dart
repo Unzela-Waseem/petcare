@@ -3,9 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({required this.onComplete, super.key});
-
-  final VoidCallback onComplete;
+  const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -37,6 +35,8 @@ class _SplashScreenState extends State<SplashScreen>
   late final Animation<double> _pawSc;
   late final Animation<double> _chipOp;
   late final Animation<double> _chipY;
+  late final Animation<double> _barOp;
+  late final Animation<double> _barY;
   late final Animation<double> _bgOff;
   late final Animation<double> _shimX;
 
@@ -73,10 +73,10 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 2200),
     )..repeat(reverse: true);
 
-    // Animated progress bar matching the minimum splash duration.
+    // Animated progress bar (3-second loading).
     _progress = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 5),
+      duration: const Duration(seconds: 3),
     )..forward();
 
     // Floating particles animation.
@@ -94,14 +94,20 @@ class _SplashScreenState extends State<SplashScreen>
     // Timer controller used for the countdown display.
     _timerController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 5),
+      duration: const Duration(seconds: 3),
     )..forward();
 
     // Background offset used for gradient animation.
-    _bgOff = Tween<double>(begin: 0.0, end: 1.0).animate(_bgShift);
+    _bgOff = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(_bgShift);
 
     // Shimmer X movement.
-    _shimX = Tween<double>(begin: -1.2, end: 2.2).animate(_shimmer);
+    _shimX = Tween<double>(
+      begin: -1.2,
+      end: 2.2,
+    ).animate(_shimmer);
 
     // Helper to create tweens with timing.
     _logoScale = _tw(0.0, 1.0, 0.00, 0.16, Curves.elasticOut);
@@ -120,6 +126,8 @@ class _SplashScreenState extends State<SplashScreen>
     _pawSc = _tw(0.0, 1.0, 0.28, 0.48, Curves.elasticOut);
     _chipOp = _tw(0.0, 1.0, 0.34, 0.50, Curves.easeOut);
     _chipY = _tw(18.0, 0.0, 0.34, 0.52, Curves.easeOutCubic);
+    _barOp = _tw(0.0, 1.0, 0.42, 0.58, Curves.easeOut);
+    _barY = _tw(28.0, 0.0, 0.42, 0.60, Curves.easeOutCubic);
 
     // When progress completes, navigate to home.
     _progress.addStatusListener((status) {
@@ -148,7 +156,7 @@ class _SplashScreenState extends State<SplashScreen>
   // Navigation to the main app.
   void _navigate() {
     if (!mounted) return;
-    widget.onComplete();
+    Navigator.of(context).pushReplacementNamed('/home');
   }
 
   @override
@@ -180,7 +188,7 @@ class _SplashScreenState extends State<SplashScreen>
               // Background gradient.
               AnimatedBuilder(
                 animation: _bgOff,
-                builder: (_, _) {
+                builder: (_, __) {
                   return Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -206,8 +214,16 @@ class _SplashScreenState extends State<SplashScreen>
               ),
 
               // Soft cloud shapes.
-              _CloudShape(left: -40, top: size.height * 0.06, size: 180),
-              _CloudShape(right: -30, top: size.height * 0.15, size: 140),
+              _CloudShape(
+                left: -40,
+                top: size.height * 0.06,
+                size: 180,
+              ),
+              _CloudShape(
+                right: -30,
+                top: size.height * 0.15,
+                size: 140,
+              ),
               _CloudShape(
                 left: size.width * 0.3,
                 top: size.height * 0.02,
@@ -219,32 +235,48 @@ class _SplashScreenState extends State<SplashScreen>
                 w * 0.75,
                 h * 0.08,
                 w * 0.55,
-                Colors.white.withValues(alpha: 0.18),
+                Colors.white.withOpacity(0.18),
               ),
               _buildGlow(
                 -w * 0.10,
                 h * 0.35,
                 w * 0.40,
-                Colors.white.withValues(alpha: 0.12),
+                Colors.white.withOpacity(0.12),
               ),
               _buildGlow(
                 w * 0.50,
                 h * 0.55,
                 w * 0.35,
-                const Color(0xFFFFD699).withValues(alpha: 0.10),
+                const Color(0xFFFFD699).withOpacity(0.10),
               ),
 
               // Rings.
-              _buildRing(w * 0.82, -h * 0.06, w * 0.28, false),
-              _buildRing(-w * 0.12, h * 0.18, w * 0.20, true),
-              _buildRing(w * 0.60, h * 0.48, w * 0.15, false),
+              _buildRing(
+                w * 0.82,
+                -h * 0.06,
+                w * 0.28,
+                false,
+              ),
+              _buildRing(
+                -w * 0.12,
+                h * 0.18,
+                w * 0.20,
+                true,
+              ),
+              _buildRing(
+                w * 0.60,
+                h * 0.48,
+                w * 0.15,
+                false,
+              ),
 
               // Particles.
-              ..._particles.map((p) => _ParticleWidget(p: p, ctrl: _float)),
-
-              // Friendly pet hero fills the open area without changing the
-              // original typography or loading treatment.
-              _buildPetHero(w),
+              ..._particles.map(
+                (p) => _ParticleWidget(
+                  p: p,
+                  ctrl: _float,
+                ),
+              ),
 
               // Main content.
               Positioned(
@@ -256,9 +288,30 @@ class _SplashScreenState extends State<SplashScreen>
                   children: [
                     _buildLogo(),
                     SizedBox(height: sm ? 24 : 34),
-                    _buildTitleLine('Your pet', _t1Op, _t1Y, _t1Sc, sm, false),
-                    _buildTitleLine('deserves', _t2Op, _t2Y, _t2Sc, sm, false),
-                    _buildTitleLine('the best', _t3Op, _t3Y, _t3Sc, sm, true),
+                    _buildTitleLine(
+                      'Your pet',
+                      _t1Op,
+                      _t1Y,
+                      _t1Sc,
+                      sm,
+                      false,
+                    ),
+                    _buildTitleLine(
+                      'deserves',
+                      _t2Op,
+                      _t2Y,
+                      _t2Sc,
+                      sm,
+                      false,
+                    ),
+                    _buildTitleLine(
+                      'the best',
+                      _t3Op,
+                      _t3Y,
+                      _t3Sc,
+                      sm,
+                      true,
+                    ),
                     const SizedBox(height: 8),
                     Opacity(
                       opacity: _pawOp.value,
@@ -266,7 +319,9 @@ class _SplashScreenState extends State<SplashScreen>
                         scale: _pawSc.value,
                         child: Text(
                           '🐾',
-                          style: TextStyle(fontSize: sm ? 36 : 44),
+                          style: TextStyle(
+                            fontSize: sm ? 36 : 44,
+                          ),
                         ),
                       ),
                     ),
@@ -293,11 +348,11 @@ class _SplashScreenState extends State<SplashScreen>
                     // Progress bar.
                     AnimatedBuilder(
                       animation: _progress,
-                      builder: (_, _) {
+                      builder: (_, __) {
                         return Container(
                           height: 4,
                           decoration: BoxDecoration(
-                            color: _peach.withValues(alpha: 0.15),
+                            color: _peach.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: ClipRRect(
@@ -308,7 +363,10 @@ class _SplashScreenState extends State<SplashScreen>
                               child: Container(
                                 decoration: const BoxDecoration(
                                   gradient: LinearGradient(
-                                    colors: [_orangeDeep, Color(0xFFFFAA44)],
+                                    colors: [
+                                      _orangeDeep,
+                                      Color(0xFFFFAA44),
+                                    ],
                                   ),
                                 ),
                               ),
@@ -323,9 +381,10 @@ class _SplashScreenState extends State<SplashScreen>
                         // Countdown timer.
                         AnimatedBuilder(
                           animation: _timerController,
-                          builder: (_, _) {
+                          builder: (_, __) {
                             final secondsLeft =
-                                ((1.0 - _timerController.value) * 5).ceil();
+                                ((1.0 - _timerController.value) * 3).ceil();
+
                             return SizedBox(
                               width: 56,
                               height: 56,
@@ -335,7 +394,7 @@ class _SplashScreenState extends State<SplashScreen>
                                   CustomPaint(
                                     size: const Size(56, 56),
                                     painter: _RingPainter(
-                                      color: _peach.withValues(alpha: 0.18),
+                                      color: _peach.withOpacity(0.18),
                                       sw: 3,
                                     ),
                                   ),
@@ -368,7 +427,9 @@ class _SplashScreenState extends State<SplashScreen>
                             children: [
                               Text(
                                 'Made with care for pet lovers',
-                                style: Theme.of(context).textTheme.bodyMedium
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
                                     ?.copyWith(
                                       fontWeight: FontWeight.w700,
                                       color: _ink,
@@ -378,8 +439,13 @@ class _SplashScreenState extends State<SplashScreen>
                               const SizedBox(height: 2),
                               Text(
                                 'v1.0 · PawfectCare',
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(color: _muted, fontSize: 11),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: _muted,
+                                      fontSize: 11,
+                                    ),
                               ),
                             ],
                           ),
@@ -397,7 +463,7 @@ class _SplashScreenState extends State<SplashScreen>
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
-                                  color: _ink.withValues(alpha: 0.15),
+                                  color: _ink.withOpacity(0.15),
                                   blurRadius: 16,
                                   offset: const Offset(0, 5),
                                 ),
@@ -426,7 +492,12 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   // Helper widgets (unchanged from original).
-  Widget _buildGlow(double left, double top, double size, Color color) {
+  Widget _buildGlow(
+    double left,
+    double top,
+    double size,
+    Color color,
+  ) {
     return Positioned(
       left: left,
       top: top,
@@ -435,78 +506,28 @@ class _SplashScreenState extends State<SplashScreen>
         height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: RadialGradient(colors: [color, Colors.transparent]),
+          gradient: RadialGradient(
+            colors: [
+              color,
+              Colors.transparent,
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildPetHero(double width) {
-    final mobile = width < 600;
-    final heroWidth = mobile
-        ? width * 0.37
-        : (width * 0.32).clamp(320.0, 430.0).toDouble();
-
-    return Positioned(
-      right: mobile ? 8 : width * 0.08,
-      bottom: mobile ? 78 : 48,
-      width: heroWidth,
-      child: AnimatedBuilder(
-        animation: Listenable.merge([_seq, _glowPulse]),
-        builder: (context, child) {
-          final floatY = (_glowPulse.value - 0.5) * 9;
-          return Opacity(
-            opacity: _chipOp.value,
-            child: Transform.translate(
-              offset: Offset(0, floatY),
-              child: Transform.scale(scale: _pawSc.value, child: child),
-            ),
-          );
-        },
-        child: Stack(
-          alignment: Alignment.bottomCenter,
-          children: [
-            Positioned(
-              left: heroWidth * 0.05,
-              right: heroWidth * 0.05,
-              bottom: 4,
-              height: heroWidth * 0.58,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      _gold.withValues(alpha: 0.34),
-                      _peach.withValues(alpha: 0.08),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Image.asset(
-              'assets/images/image.png',
-              width: heroWidth,
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.high,
-              semanticLabel: 'Happy dog and cat',
-              errorBuilder: (_, _, _) => Icon(
-                Icons.pets_rounded,
-                size: heroWidth * 0.45,
-                color: _orangeDeep,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRing(double left, double top, double size, bool reverse) {
+  Widget _buildRing(
+    double left,
+    double top,
+    double size,
+    bool reverse,
+  ) {
     return AnimatedBuilder(
       animation: _float,
-      builder: (_, _) {
+      builder: (_, __) {
         final v = reverse ? 1.0 - _float.value : _float.value;
+
         return Positioned(
           left: left,
           top: top,
@@ -518,7 +539,7 @@ class _SplashScreenState extends State<SplashScreen>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: const Color(0xFFD4A050).withValues(alpha: 0.10),
+                  color: const Color(0xFFD4A050).withOpacity(0.10),
                   width: 1.5,
                 ),
               ),
@@ -534,22 +555,25 @@ class _SplashScreenState extends State<SplashScreen>
       opacity: _logoOp.value,
       child: AnimatedBuilder(
         animation: _logoGlow,
-        builder: (_, _) {
+        builder: (_, __) {
           return Transform.scale(
             scale: _logoScale.value,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 13,
+              ),
               decoration: BoxDecoration(
                 color: _ink,
                 borderRadius: BorderRadius.circular(32),
                 boxShadow: [
                   BoxShadow(
-                    color: _ink.withValues(alpha: 0.20),
+                    color: _ink.withOpacity(0.20),
                     blurRadius: 32,
                     offset: const Offset(0, 12),
                   ),
                   BoxShadow(
-                    color: _gold.withValues(alpha: _logoGlow.value),
+                    color: _gold.withOpacity(_logoGlow.value),
                     blurRadius: 44,
                     spreadRadius: 6,
                   ),
@@ -558,7 +582,11 @@ class _SplashScreenState extends State<SplashScreen>
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.pets_rounded, color: _gold, size: 20),
+                  Icon(
+                    Icons.pets_rounded,
+                    color: _gold,
+                    size: 20,
+                  ),
                   SizedBox(width: 10),
                   Text(
                     'PawfectCare',
@@ -587,6 +615,7 @@ class _SplashScreenState extends State<SplashScreen>
     bool accent,
   ) {
     final fontSize = sm ? 42.0 : 52.0;
+
     return Opacity(
       opacity: opacity.value,
       child: Transform.translate(
@@ -596,32 +625,53 @@ class _SplashScreenState extends State<SplashScreen>
           alignment: Alignment.centerLeft,
           child: AnimatedBuilder(
             animation: _shimmer,
-            builder: (_, _) => ShaderMask(
-              shaderCallback: (bounds) {
-                final width = bounds.width;
-                final shimmerPosition = _shimX.value * width;
-                return LinearGradient(
-                  colors: accent
-                      ? const [_ink, _ink, Color(0xFFE8875B), _ink, _ink]
-                      : const [_ink, _ink, Color(0xFFD4A050), _ink, _ink],
-                  stops: const [0.0, 0.32, 0.50, 0.68, 1.0],
-                  transform: _SlidingGradientTransform(
-                    shimmerPosition - width * 0.3,
+            builder: (_, __) {
+              return ShaderMask(
+                shaderCallback: (bounds) {
+                  final width = bounds.width;
+                  final shimmerPosition = _shimX.value * width;
+
+                  return LinearGradient(
+                    colors: accent
+                        ? const [
+                            _ink,
+                            _ink,
+                            Color(0xFFE8875B),
+                            _ink,
+                            _ink,
+                          ]
+                        : const [
+                            _ink,
+                            _ink,
+                            Color(0xFFD4A050),
+                            _ink,
+                            _ink,
+                          ],
+                    stops: const [
+                      0.0,
+                      0.32,
+                      0.50,
+                      0.68,
+                      1.0,
+                    ],
+                    transform: _SlidingGradientTransform(
+                      shimmerPosition - width * 0.3,
+                    ),
+                  ).createShader(bounds);
+                },
+                blendMode: BlendMode.srcIn,
+                child: Text(
+                  text,
+                  style: TextStyle(
+                    fontSize: fontSize,
+                    height: 1.08,
+                    letterSpacing: -2.0,
+                    fontWeight: FontWeight.w900,
+                    color: _ink,
                   ),
-                ).createShader(bounds);
-              },
-              blendMode: BlendMode.srcIn,
-              child: Text(
-                text,
-                style: TextStyle(
-                  fontSize: fontSize,
-                  height: 1.08,
-                  letterSpacing: -2.0,
-                  fontWeight: FontWeight.w900,
-                  color: _ink,
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
       ),
@@ -630,14 +680,19 @@ class _SplashScreenState extends State<SplashScreen>
 
   Widget _buildChip() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: 9,
+      ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.55),
+        color: Colors.white.withOpacity(0.55),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.80)),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.80),
+        ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFC9A04C).withValues(alpha: 0.08),
+            color: const Color(0xFFC9A04C).withOpacity(0.08),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -654,14 +709,14 @@ class _SplashScreenState extends State<SplashScreen>
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: _orangeDeep.withValues(alpha: 0.35),
+                  color: _orangeDeep.withOpacity(0.35),
                   blurRadius: 6,
                 ),
               ],
             ),
           ),
           const SizedBox(width: 10),
-          Text(
+          const Text(
             'Preparing your experience…',
             style: TextStyle(
               color: _muted,
@@ -676,18 +731,21 @@ class _SplashScreenState extends State<SplashScreen>
 
   List<_Particle> _makeParticles() {
     final rng = Random(42);
+
     final icons = [
       Icons.favorite_rounded,
       Icons.pets_rounded,
       Icons.star_rounded,
       Icons.volunteer_activism_rounded,
     ];
+
     final colors = [
       const Color(0xFFFF8A65),
       const Color(0xFFCE93D8),
       const Color(0xFFFFD54F),
       const Color(0xFF81C784),
     ];
+
     return List.generate(
       18,
       (i) => _Particle(
@@ -734,7 +792,11 @@ class _Particle {
 }
 
 class _ParticleWidget extends StatelessWidget {
-  const _ParticleWidget({required this.p, required this.ctrl});
+  const _ParticleWidget({
+    required this.p,
+    required this.ctrl,
+  });
+
   final _Particle p;
   final AnimationController ctrl;
 
@@ -742,15 +804,19 @@ class _ParticleWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: ctrl,
-      builder: (_, _) {
+      builder: (_, __) {
         final v = ctrl.value;
         final cycle = (v * p.speed * 3) % 1.4 - 0.2;
         final py = p.baseY - cycle;
-        final px = p.x + sin(v * 2 * pi + p.rot) * p.drift * 10;
-        final rotation = p.rot + v * p.rotSpd * 2 * pi;
+        final px =
+            p.x + sin(v * 2 * pi + p.rot) * p.drift * 10;
+        final rotation =
+            p.rot + v * p.rotSpd * 2 * pi;
         final opacity = py < -0.1 || py > 1.2
             ? 0.0
-            : p.alpha * (1.0 - (py.abs() - 0.3).clamp(0.0, 0.7));
+            : p.alpha *
+                (1.0 - (py.abs() - 0.3).clamp(0.0, 0.7));
+
         return Positioned(
           left: px * MediaQuery.sizeOf(context).width,
           top: py * MediaQuery.sizeOf(context).height,
@@ -758,7 +824,11 @@ class _ParticleWidget extends StatelessWidget {
             opacity: opacity,
             child: Transform.rotate(
               angle: rotation,
-              child: Icon(p.icon, size: p.size, color: p.color),
+              child: Icon(
+                p.icon,
+                size: p.size,
+                color: p.color,
+              ),
             ),
           ),
         );
@@ -768,11 +838,17 @@ class _ParticleWidget extends StatelessWidget {
 }
 
 class _SlidingGradientTransform extends GradientTransform {
-  const _SlidingGradientTransform(this.dx);
+  _SlidingGradientTransform(this.dx);
+
   final double dx;
+
   @override
-  Matrix4? transform(Rect bounds, {TextDirection? textDirection}) =>
-      Matrix4.translationValues(dx, 0, 0);
+  Matrix4? transform(
+    Rect bounds, {
+    TextDirection? textDirection,
+  }) {
+    return Matrix4.translationValues(dx, 0, 0);
+  }
 }
 
 class _RingPainter extends CustomPainter {
@@ -782,33 +858,58 @@ class _RingPainter extends CustomPainter {
     this.prog = 1.0,
     this.round = false,
   });
+
   final Color color;
   final double sw;
   final double prog;
   final bool round;
+
   @override
   void paint(Canvas canvas, Size size) {
     final radius = (size.width - sw * 2) / 2;
-    final center = Offset(size.width / 2, size.height / 2);
+    final center = Offset(
+      size.width / 2,
+      size.height / 2,
+    );
+
     final paint = Paint()
       ..color = color
       ..strokeWidth = sw
       ..style = PaintingStyle.stroke
-      ..strokeCap = round ? StrokeCap.round : StrokeCap.butt;
+      ..strokeCap =
+          round ? StrokeCap.round : StrokeCap.butt;
+
     if (prog >= 1.0) {
-      canvas.drawCircle(center, radius, paint);
+      canvas.drawCircle(
+        center,
+        radius,
+        paint,
+      );
     } else {
-      final rect = Rect.fromCircle(center: center, radius: radius);
-      canvas.drawArc(rect, -pi / 2, 2 * pi * prog, false, paint);
+      final rect = Rect.fromCircle(
+        center: center,
+        radius: radius,
+      );
+
+      canvas.drawArc(
+        rect,
+        -pi / 2,
+        2 * pi * prog,
+        false,
+        paint,
+      );
     }
   }
 
   @override
-  bool shouldRepaint(covariant _RingPainter oldDelegate) =>
-      prog != oldDelegate.prog ||
-      color != oldDelegate.color ||
-      sw != oldDelegate.sw ||
-      round != oldDelegate.round;
+  bool shouldRepaint(
+    covariant _RingPainter oldDelegate,
+  ) {
+    return prog != oldDelegate.prog ||
+        color != oldDelegate.color ||
+        sw != oldDelegate.sw ||
+        round != oldDelegate.round;
+  }
 }
 
 class _CloudShape extends StatelessWidget {
@@ -818,10 +919,12 @@ class _CloudShape extends StatelessWidget {
     required this.top,
     required this.size,
   });
+
   final double? left;
   final double? right;
   final double top;
   final double size;
+
   @override
   Widget build(BuildContext context) {
     return Positioned(
@@ -831,9 +934,9 @@ class _CloudShape extends StatelessWidget {
       child: Container(
         width: size,
         height: size,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Color(0x33FFFFFF),
+          color: const Color(0xFFFFFFFF).withOpacity(0.2),
         ),
       ),
     );

@@ -12,7 +12,6 @@ import '../../../domain/models/care_models.dart';
 import '../../../domain/models/user_role.dart';
 import '../../../domain/repositories/care_repository.dart';
 import '../../../domain/repositories/media_storage_service.dart';
-import '../pets/pet_identity_screen.dart';
 import 'shelter_operations_screen.dart';
 
 class AdoptionListingsScreen extends StatefulWidget {
@@ -185,9 +184,6 @@ class _AdoptionListingsScreenState extends State<AdoptionListingsScreen> {
                   onRequest: () => _request(listing),
                   onEdit: () => _edit(shelter!, listing),
                   onDelete: () => _delete(listing),
-                  onQr: _isAdmin && shelter != null
-                      ? () => _openQr(shelter, listing)
-                      : null,
                 );
               },
             );
@@ -286,20 +282,6 @@ class _AdoptionListingsScreenState extends State<AdoptionListingsScreen> {
       ),
     ),
   );
-
-  Future<void> _openQr(ShelterProfile shelter, AdoptionListing listing) =>
-      Navigator.of(context).push<void>(
-        MaterialPageRoute<void>(
-          builder: (_) => PetIdentityScreen(
-            user: widget.user,
-            services: widget.services,
-            seed: PetIdentitySeed.shelterListing(
-              listing: listing,
-              shelter: shelter,
-            ),
-          ),
-        ),
-      );
 
   Future<void> _delete(AdoptionListing listing) async {
     final yes = await showDialog<bool>(
@@ -786,14 +768,12 @@ class _ListingCard extends StatelessWidget {
     required this.onRequest,
     required this.onEdit,
     required this.onDelete,
-    required this.onQr,
   });
   final AdoptionListing listing;
   final bool isAdmin;
   final VoidCallback onRequest;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
-  final VoidCallback? onQr;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -849,11 +829,6 @@ class _ListingCard extends StatelessWidget {
                 onPressed: onEdit,
                 icon: const Icon(Icons.edit_outlined),
                 label: const Text('Edit'),
-              ),
-              OutlinedButton.icon(
-                onPressed: onQr,
-                icon: const Icon(Icons.qr_code_2_rounded),
-                label: const Text('QR Identity'),
               ),
               OutlinedButton.icon(
                 onPressed: onDelete,

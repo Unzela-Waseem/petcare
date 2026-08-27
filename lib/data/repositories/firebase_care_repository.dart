@@ -7,7 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/models/app_user.dart';
 import '../../domain/models/care_models.dart';
 import '../../domain/models/pet.dart';
-import '../../domain/models/public_pet_profile.dart';
 import '../../domain/models/user_role.dart';
 import '../../domain/repositories/care_repository.dart';
 import '../services/activity_notification_builder.dart';
@@ -69,93 +68,12 @@ class FirebaseCareRepository implements CareRepository {
       data['createdAt'] = FieldValue.serverTimestamp();
     }
     await reference.set(data, SetOptions(merge: true));
-    await _syncPublicPetProfiles(
-      managerId: pet.ownerId,
-      sourceType: PublicPetSourceType.ownedPet,
-      sourceId: reference.id,
-      values: {
-        'petName': pet.name.trim(),
-        'species': pet.species.trim(),
-        'breed': pet.breed.trim(),
-        'age': pet.age,
-        'gender': pet.gender,
-        'description': pet.description.trim(),
-        'photoUrl': pet.photoUrl,
-      },
-    );
     return reference.id;
   });
 
   @override
-  Future<void> deletePet(Pet pet) => _safe(() async {
-    final profiles = await _managedPublicPetProfiles(
-      managerId: pet.ownerId,
-      sourceType: PublicPetSourceType.ownedPet,
-      sourceId: pet.id,
-    ).get();
-    final batch = _db.batch();
-    batch.delete(_db.collection('pets').doc(pet.id));
-    for (final profile in profiles.docs) {
-      batch.delete(profile.reference);
-    }
-    await batch.commit();
-  });
-
-  @override
-  Stream<PublicPetProfile?> watchPublicPetProfile(String publicId) => _db
-      .collection('publicPetProfiles')
-      .doc(publicId)
-      .snapshots()
-      .map((document) => document.exists ? _publicPetFromDoc(document) : null);
-
-  @override
-  Stream<PublicPetProfile?> watchManagedPublicPetProfile({
-    required String managerId,
-    required PublicPetSourceType sourceType,
-    required String sourceId,
-  }) =>
-      _managedPublicPetProfiles(
-        managerId: managerId,
-        sourceType: sourceType,
-        sourceId: sourceId,
-      ).snapshots().map(
-        (snapshot) => snapshot.docs.isEmpty
-            ? null
-            : _publicPetFromDoc(snapshot.docs.first),
-      );
-
-  @override
-  Future<String> savePublicPetProfile(PublicPetProfile profile) =>
-      _safe(() async {
-        final reference = profile.id.isEmpty
-            ? _db.collection('publicPetProfiles').doc()
-            : _db.collection('publicPetProfiles').doc(profile.id);
-        await reference.set({
-          'sourceId': profile.sourceId,
-          'sourceType': profile.sourceType.value,
-          'managerId': profile.managerId,
-          'petName': profile.petName.trim(),
-          'species': profile.species.trim(),
-          'breed': profile.breed.trim(),
-          'age': profile.age,
-          'gender': profile.gender.trim(),
-          'photoUrl': profile.photoUrl,
-          'description': profile.description.trim(),
-          'allergies': profile.allergies.trim(),
-          'emergencyNotes': profile.emergencyNotes.trim(),
-          'contactName': profile.contactName.trim(),
-          'contactPhone': profile.contactPhone.trim(),
-          'isLost': profile.isLost,
-          'active': true,
-          'updatedAt': FieldValue.serverTimestamp(),
-          if (profile.id.isEmpty) 'createdAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-        return reference.id;
-      });
-
-  @override
-  Future<void> deletePublicPetProfile(String publicId) =>
-      _safe(() => _db.collection('publicPetProfiles').doc(publicId).delete());
+  Future<void> deletePet(Pet pet) =>
+      _safe(() => _db.collection('pets').doc(pet.id).delete());
 
   @override
   Stream<List<HealthRecord>> watchHealthRecords(String petId) => _db
@@ -545,38 +463,12 @@ class FirebaseCareRepository implements CareRepository {
           'updatedAt': FieldValue.serverTimestamp(),
           if (listing.id.isEmpty) 'createdAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
-        await _syncPublicPetProfiles(
-          managerId: listing.adminId,
-          sourceType: PublicPetSourceType.shelterListing,
-          sourceId: reference.id,
-          values: {
-            'petName': listing.petName.trim(),
-            'species': listing.species.trim(),
-            'age': listing.age,
-            'gender': listing.gender,
-            'description': listing.description.trim(),
-            'photoUrl': listing.photoUrl,
-            'emergencyNotes': listing.healthStatus.trim(),
-          },
-        );
         return reference.id;
       });
 
   @override
   Future<void> deleteAdoptionListing(AdoptionListing listing) =>
-      _safe(() async {
-        final profiles = await _managedPublicPetProfiles(
-          managerId: listing.adminId,
-          sourceType: PublicPetSourceType.shelterListing,
-          sourceId: listing.id,
-        ).get();
-        final batch = _db.batch();
-        batch.delete(_db.collection('adoptionListings').doc(listing.id));
-        for (final profile in profiles.docs) {
-          batch.delete(profile.reference);
-        }
-        await batch.commit();
-      });
+      _safe(() => _db.collection('adoptionListings').doc(listing.id).delete());
 
   @override
   Stream<List<AdoptionRequest>> watchAdoptionRequests(AppUser user) {
@@ -1039,65 +931,6 @@ class FirebaseCareRepository implements CareRepository {
   List<Pet> _sortPets(List<Pet> pets) {
     pets.sort((a, b) => a.name.compareTo(b.name));
     return pets;
-  }
-
-  Query<Map<String, dynamic>> _managedPublicPetProfiles({
-    required String managerId,
-    required PublicPetSourceType sourceType,
-    required String sourceId,
-  }) => _db
-      .collection('publicPetProfiles')
-      .where('managerId', isEqualTo: managerId)
-      .where('sourceType', isEqualTo: sourceType.value)
-      .where('sourceId', isEqualTo: sourceId)
-      .limit(1);
-
-  Future<void> _syncPublicPetProfiles({
-    required String managerId,
-    required PublicPetSourceType sourceType,
-    required String sourceId,
-    required Map<String, Object?> values,
-  }) async {
-    final snapshot = await _managedPublicPetProfiles(
-      managerId: managerId,
-      sourceType: sourceType,
-      sourceId: sourceId,
-    ).get();
-    if (snapshot.docs.isEmpty) return;
-    final batch = _db.batch();
-    for (final document in snapshot.docs) {
-      batch.update(document.reference, {
-        ...values,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    }
-    await batch.commit();
-  }
-
-  PublicPetProfile _publicPetFromDoc(
-    DocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
-    final data = doc.data() ?? const <String, dynamic>{};
-    return PublicPetProfile(
-      id: doc.id,
-      sourceId: data['sourceId'] as String? ?? '',
-      sourceType: PublicPetSourceType.parse(data['sourceType'] as String?),
-      managerId: data['managerId'] as String? ?? '',
-      petName: data['petName'] as String? ?? 'Pet',
-      species: data['species'] as String? ?? '',
-      breed: data['breed'] as String? ?? '',
-      age: (data['age'] as num?)?.toInt() ?? 0,
-      gender: data['gender'] as String? ?? '',
-      photoUrl: data['photoUrl'] as String?,
-      description: data['description'] as String? ?? '',
-      allergies: data['allergies'] as String? ?? '',
-      emergencyNotes: data['emergencyNotes'] as String? ?? '',
-      contactName: data['contactName'] as String? ?? '',
-      contactPhone: data['contactPhone'] as String? ?? '',
-      isLost: data['isLost'] as bool? ?? false,
-      active: data['active'] as bool? ?? false,
-      updatedAt: _nullableDate(data['updatedAt']),
-    );
   }
 
   Pet _petFromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
