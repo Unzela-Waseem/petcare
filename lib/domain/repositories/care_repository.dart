@@ -1,12 +1,22 @@
 import '../models/app_user.dart';
 import '../models/care_models.dart';
 import '../models/pet.dart';
+import '../models/public_pet_profile.dart';
 
 abstract interface class CareRepository {
   Stream<List<Pet>> watchOwnedPets(String ownerId);
   Stream<List<Pet>> watchAssignedPets(String veterinarianId);
   Future<String> savePet(Pet pet);
   Future<void> deletePet(Pet pet);
+
+  Stream<PublicPetProfile?> watchPublicPetProfile(String publicId);
+  Stream<PublicPetProfile?> watchManagedPublicPetProfile({
+    required String managerId,
+    required PublicPetSourceType sourceType,
+    required String sourceId,
+  });
+  Future<String> savePublicPetProfile(PublicPetProfile profile);
+  Future<void> deletePublicPetProfile(String publicId);
 
   Stream<List<HealthRecord>> watchHealthRecords(String petId);
   Future<String> saveHealthRecord({

@@ -128,7 +128,8 @@ command is:
 flutter run -d chrome \
   --dart-define=USE_FIREBASE=true \
   --dart-define=CLOUDINARY_CLOUD_NAME=dc1w5stzg \
-  --dart-define=CLOUDINARY_UPLOAD_PRESET=pawfactcare_unsigned
+  --dart-define=CLOUDINARY_UPLOAD_PRESET=pawfactcare_unsigned \
+  --dart-define=PUBLIC_WEB_BASE_URL=https://pawfectcare-unzela-2026.web.app/
 ```
 
 The following values are disabled by default because they require additional
@@ -139,6 +140,7 @@ production infrastructure:
 | `USE_FIREBASE_STORAGE` | `false` | Use private Firebase Storage instead of the hybrid media fallback |
 | `USE_FIREBASE_PUSH` | `false` | Enable trusted-backend FCM token registration and remote push |
 | `FCM_WEB_VAPID_KEY` | empty | Public Web Push certificate key |
+| `PUBLIC_WEB_BASE_URL` | PawfectCare Firebase Hosting URL | Stable public base URL encoded into printable pet QR tags |
 
 ## Current Firebase status
 
@@ -151,6 +153,9 @@ production infrastructure:
 - All roles receive authorization-scoped in-app appointment, adoption, health,
   and blog updates.
 - Android/iOS appointment and medical reminders are scheduled locally.
+- Pet owners and shelter admins can generate, preview, copy, regenerate,
+  disable, and share/download secure QR pet identities. Normal phone-camera
+  scans open only the explicitly public safety profile without requiring login.
 - Automatic remote FCM delivery while the app is fully closed requires a
   trusted deployed sender. The checked-in Cloud Functions implement that sender,
   but production Functions deployment requires the Firebase Blaze plan.

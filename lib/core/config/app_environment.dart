@@ -28,6 +28,10 @@ abstract final class AppEnvironment {
       cloudinaryCloudName.isNotEmpty && cloudinaryUploadPreset.isNotEmpty;
 
   static const appName = 'PawfectCare';
+  static const publicWebBaseUrl = String.fromEnvironment(
+    'PUBLIC_WEB_BASE_URL',
+    defaultValue: 'https://pawfectcare-unzela-2026.web.app/',
+  );
   static const fcmWebVapidKey = String.fromEnvironment('FCM_WEB_VAPID_KEY');
   static bool get isDemo => !usesFirebase;
 }

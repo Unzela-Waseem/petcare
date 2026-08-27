@@ -3,6 +3,7 @@ import 'dart:async';
 import '../../domain/models/app_user.dart';
 import '../../domain/models/care_models.dart';
 import '../../domain/models/pet.dart';
+import '../../domain/models/public_pet_profile.dart';
 import '../../domain/models/user_role.dart';
 import '../../domain/repositories/care_repository.dart';
 import '../seed/catalog_seed.dart';
@@ -56,6 +57,9 @@ class DemoCareRepository implements CareRepository {
   final List<BlogArticle> _blogs;
   final Set<String> _wishlist = {};
   final Set<String> _bookmarks = {};
+  final Map<String, PublicPetProfile> _publicPetProfiles = {};
+  final StreamController<String> _publicPetProfileChanges =
+      StreamController<String>.broadcast();
 
   @override
   Stream<List<Pet>> watchOwnedPets(String ownerId) =>
@@ -71,13 +75,103 @@ class DemoCareRepository implements CareRepository {
         ? 'demo-pet-${DateTime.now().microsecondsSinceEpoch}'
         : pet.id;
     _pets.removeWhere((item) => item.id == id);
-    _pets.add(pet.copyWith(id: id));
+    final saved = pet.copyWith(id: id);
+    _pets.add(saved);
+    _syncDemoPublicPetProfile(
+      managerId: saved.ownerId,
+      sourceType: PublicPetSourceType.ownedPet,
+      sourceId: saved.id,
+      transform: (profile) => PublicPetProfile(
+        id: profile.id,
+        sourceId: profile.sourceId,
+        sourceType: profile.sourceType,
+        managerId: profile.managerId,
+        petName: saved.name,
+        species: saved.species,
+        breed: saved.breed,
+        age: saved.age,
+        gender: saved.gender,
+        photoUrl: saved.photoUrl,
+        description: saved.description,
+        allergies: profile.allergies,
+        emergencyNotes: profile.emergencyNotes,
+        contactName: profile.contactName,
+        contactPhone: profile.contactPhone,
+        isLost: profile.isLost,
+        updatedAt: DateTime.now(),
+      ),
+    );
     return id;
   }
 
   @override
-  Future<void> deletePet(Pet pet) async =>
-      _pets.removeWhere((item) => item.id == pet.id);
+  Future<void> deletePet(Pet pet) async {
+    _pets.removeWhere((item) => item.id == pet.id);
+    final profileIds = _publicPetProfiles.values
+        .where(
+          (profile) =>
+              profile.managerId == pet.ownerId &&
+              profile.sourceType == PublicPetSourceType.ownedPet &&
+              profile.sourceId == pet.id,
+        )
+        .map((profile) => profile.id)
+        .toList();
+    for (final id in profileIds) {
+      _publicPetProfiles.remove(id);
+      _publicPetProfileChanges.add(id);
+    }
+  }
+
+  @override
+  Stream<PublicPetProfile?> watchPublicPetProfile(String publicId) async* {
+    yield _publicPetProfiles[publicId];
+    await for (final changedId in _publicPetProfileChanges.stream) {
+      if (changedId == publicId) yield _publicPetProfiles[publicId];
+    }
+  }
+
+  @override
+  Stream<PublicPetProfile?> watchManagedPublicPetProfile({
+    required String managerId,
+    required PublicPetSourceType sourceType,
+    required String sourceId,
+  }) async* {
+    PublicPetProfile? current() {
+      for (final profile in _publicPetProfiles.values) {
+        if (profile.managerId == managerId &&
+            profile.sourceType == sourceType &&
+            profile.sourceId == sourceId) {
+          return profile;
+        }
+      }
+      return null;
+    }
+
+    yield current();
+    await for (final _ in _publicPetProfileChanges.stream) {
+      yield current();
+    }
+  }
+
+  @override
+  Future<String> savePublicPetProfile(PublicPetProfile profile) async {
+    final id = profile.id.isEmpty
+        ? 'demo-public-pet-${DateTime.now().microsecondsSinceEpoch}'
+        : profile.id;
+    _publicPetProfiles[id] = profile.copyWith(
+      id: id,
+      active: true,
+      updatedAt: DateTime.now(),
+    );
+    _publicPetProfileChanges.add(id);
+    return id;
+  }
+
+  @override
+  Future<void> deletePublicPetProfile(String publicId) async {
+    _publicPetProfiles.remove(publicId);
+    _publicPetProfileChanges.add(publicId);
+  }
 
   final Map<String, List<HealthRecord>> _healthRecordsStore = {};
 
@@ -785,4 +879,21 @@ class DemoCareRepository implements CareRepository {
     required String uid,
     required Map<String, bool> preferences,
   }) async {}
+
+  void _syncDemoPublicPetProfile({
+    required String managerId,
+    required PublicPetSourceType sourceType,
+    required String sourceId,
+    required PublicPetProfile Function(PublicPetProfile profile) transform,
+  }) {
+    for (final entry in _publicPetProfiles.entries.toList()) {
+      final profile = entry.value;
+      if (profile.managerId == managerId &&
+          profile.sourceType == sourceType &&
+          profile.sourceId == sourceId) {
+        _publicPetProfiles[entry.key] = transform(profile);
+        _publicPetProfileChanges.add(entry.key);
+      }
+    }
+  }
 }
