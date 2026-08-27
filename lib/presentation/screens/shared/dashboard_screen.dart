@@ -66,13 +66,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     suffixIcon: Icon(Icons.tune_rounded),
                   ),
                 ),
-                if (query.isEmpty) ...[
-                  const SizedBox(height: 18),
-                  _QuickAccessStrip(
-                    role: widget.user.role,
-                    onOpen: (feature) => _openFeature(context, feature),
-                  ),
-                ] else ...[
+                if (query.isNotEmpty) ...[
                   const SizedBox(height: 18),
                   _SearchDestinations(
                     query: query,
@@ -89,6 +83,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 22),
                 if (query.isEmpty) ...[
                   _buildHero(context),
+                  const SizedBox(height: 20),
+                  _QuickAccessStrip(
+                    role: widget.user.role,
+                    onOpen: (feature) => _openFeature(context, feature),
+                  ),
                   const SizedBox(height: 24),
                 ],
                 SectionHeading(

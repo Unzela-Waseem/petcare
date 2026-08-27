@@ -202,7 +202,7 @@ class _RoleDrawer extends StatelessWidget {
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [AppColors.ink, Color(0xFF332B24)],
+                  colors: [AppColors.peachLight, AppColors.peach],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -215,14 +215,14 @@ class _RoleDrawer extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 19,
-                        backgroundColor: AppColors.orange,
+                        backgroundColor: AppColors.surface,
                         child: Icon(Icons.pets_rounded, color: AppColors.ink),
                       ),
                       SizedBox(width: 11),
                       Text(
                         'PawfectCare',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.ink,
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
                         ),
@@ -234,7 +234,7 @@ class _RoleDrawer extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 26,
-                        backgroundColor: AppColors.peach,
+                        backgroundColor: AppColors.orange,
                         child: Text(
                           initials.isEmpty ? 'P' : initials,
                           style: const TextStyle(
@@ -253,7 +253,7 @@ class _RoleDrawer extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: AppColors.ink,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -262,7 +262,7 @@ class _RoleDrawer extends StatelessWidget {
                             Text(
                               user.role.label,
                               style: const TextStyle(
-                                color: Color(0xFFD8D0C8),
+                                color: AppColors.muted,
                                 fontSize: 12,
                               ),
                             ),
