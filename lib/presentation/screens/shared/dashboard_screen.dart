@@ -390,53 +390,50 @@ class _QuickAccessStrip extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         SizedBox(
-          height: 94,
+          height: 104,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: actions.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            separatorBuilder: (_, _) => const SizedBox(width: 14),
             itemBuilder: (context, index) {
               final feature = actions[index];
-              return InkWell(
-                onTap: () => onOpen(feature),
-                borderRadius: BorderRadius.circular(22),
-                child: Ink(
-                  width: 190,
-                  padding: const EdgeInsets.all(13),
-                  decoration: BoxDecoration(
-                    color: feature.color,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: .8),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: const BoxDecoration(
-                          color: AppColors.surface,
+              return SizedBox(
+                width: 88,
+                child: Column(
+                  children: [
+                    InkWell(
+                      onTap: () => onOpen(feature),
+                      customBorder: const CircleBorder(),
+                      child: Ink(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: feature.color,
                           shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 3),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x16000000),
+                              blurRadius: 16,
+                              offset: Offset(0, 7),
+                            ),
+                          ],
                         ),
-                        child: Icon(feature.icon, size: 21),
+                        child: Icon(feature.icon, size: 25),
                       ),
-                      const SizedBox(width: 11),
-                      Expanded(
-                        child: Text(
-                          feature.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            height: 1.15,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _shortLabel(feature.title),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
                       ),
-                      const Icon(Icons.arrow_outward_rounded, size: 16),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
             },
@@ -445,6 +442,18 @@ class _QuickAccessStrip extends StatelessWidget {
       ],
     );
   }
+
+  String _shortLabel(String title) => switch (title) {
+    "Today's Appointments" => 'Today',
+    'Health Records' => 'Health',
+    'Medical Records' => 'Records',
+    'Assigned Pets' => 'Patients',
+    'Pet Listings' => 'Listings',
+    'Adoption Requests' => 'Requests',
+    'Volunteer Requests' => 'Volunteer',
+    'Success Stories' => 'Stories',
+    _ => title,
+  };
 }
 
 class _HeroCard extends StatelessWidget {

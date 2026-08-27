@@ -84,7 +84,7 @@ class _RoleHomeShellState extends State<RoleHomeShell> {
         minimum: const EdgeInsets.fromLTRB(18, 0, 18, 12),
         child: Container(
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: AppColors.ink,
             borderRadius: BorderRadius.circular(28),
             boxShadow: const [
               BoxShadow(
@@ -96,33 +96,47 @@ class _RoleHomeShellState extends State<RoleHomeShell> {
           ),
           clipBehavior: Clip.antiAlias,
           child: NavigationBar(
+            backgroundColor: AppColors.ink,
+            indicatorColor: AppColors.orange,
             height: 68,
             selectedIndex: _index,
             onDestinationSelected: (value) => setState(() => _index = value),
             destinations: const [
               NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home_rounded),
+                icon: Icon(Icons.home_outlined, color: Colors.white70),
+                selectedIcon: Icon(Icons.home_rounded, color: AppColors.ink),
                 label: 'Home',
               ),
               NavigationDestination(
-                icon: Icon(Icons.explore_outlined),
-                selectedIcon: Icon(Icons.explore_rounded),
+                icon: Icon(Icons.explore_outlined, color: Colors.white70),
+                selectedIcon: Icon(Icons.explore_rounded, color: AppColors.ink),
                 label: 'Explore',
               ),
               NavigationDestination(
-                icon: Icon(Icons.favorite_border_rounded),
-                selectedIcon: Icon(Icons.favorite_rounded),
+                icon: Icon(
+                  Icons.favorite_border_rounded,
+                  color: Colors.white70,
+                ),
+                selectedIcon: Icon(
+                  Icons.favorite_rounded,
+                  color: AppColors.ink,
+                ),
                 label: 'Saved',
               ),
               NavigationDestination(
-                icon: Icon(Icons.chat_bubble_outline_rounded),
-                selectedIcon: Icon(Icons.chat_bubble_rounded),
+                icon: Icon(
+                  Icons.chat_bubble_outline_rounded,
+                  color: Colors.white70,
+                ),
+                selectedIcon: Icon(
+                  Icons.chat_bubble_rounded,
+                  color: AppColors.ink,
+                ),
                 label: 'Messages',
               ),
               NavigationDestination(
-                icon: Icon(Icons.person_outline_rounded),
-                selectedIcon: Icon(Icons.person_rounded),
+                icon: Icon(Icons.person_outline_rounded, color: Colors.white70),
+                selectedIcon: Icon(Icons.person_rounded, color: AppColors.ink),
                 label: 'Profile',
               ),
             ],
