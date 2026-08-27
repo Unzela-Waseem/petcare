@@ -7,6 +7,9 @@ const {
   onDocumentUpdated,
 } = require("firebase-functions/v2/firestore");
 const {onSchedule} = require("firebase-functions/v2/scheduler");
+const {onRequest} = require("firebase-functions/v2/https");
+const {defineSecret} = require("firebase-functions/params");
+const {getAuth} = require("firebase-admin/auth");
 const logger = require("firebase-functions/logger");
 
 initializeApp();
@@ -231,5 +234,111 @@ exports.sendDueReminders = onSchedule(
         }, `vaccination-${record.id}-24h`);
       });
       await Promise.all([...appointmentJobs, ...vaccineJobs]);
+    },
+);
+
+// --- In-app AI assistant -------------------------------------------------
+//
+// Keeps the Gemini API key on the server: the Flutter app only ever talks
+// to this HTTPS endpoint with the signed-in user's Firebase ID token, never
+// with the model provider directly. Set the key once with:
+//   firebase functions:secrets:set GEMINI_API_KEY
+const geminiApiKey = defineSecret("GEMINI_API_KEY");
+
+const ASSISTANT_SYSTEM_PROMPT = "You are the in-app assistant for " +
+  "PawfectCare, a pet-care Flutter app. Answer the user's question " +
+  "directly and concisely, in the same language they wrote in " +
+  "(English, Urdu, or Roman Urdu). You are not limited to pet topics " +
+  "and may help with anything the user asks.\n\n" +
+  "Here is how PawfectCare itself works, in case the user asks about " +
+  "the app: after sign up, the user picks one of three roles - Pet " +
+  "Owner, Veterinarian, or Shelter Admin - which decides what their " +
+  "home screen shows. The bottom navigation always has 5 tabs: Home " +
+  "(role-specific dashboard and quick actions), Explore (find vets or " +
+  "adoptable pets), Saved, Messages, and Profile. A floating chat " +
+  "button (this assistant) is available from any screen. Pet Owners " +
+  "see: My Pets, Health Records, Appointments, Pet Store, Care Tips, " +
+  "Adoption, Adoption Requests, Success Stories, Notifications, and " +
+  "Contact & Feedback. Veterinarians see: Today's Appointments, " +
+  "Assigned Pets, Patient History, Calendar, Medical Records, Care " +
+  "Tips, Success Stories, and Notifications. Shelter Admins see: Pet " +
+  "Listings, Adoption Requests, Success Stories, Volunteer Requests, " +
+  "Contact Messages, Care Tips, and Notifications. Use this context " +
+  "when the user asks how to run or use the app, but do not repeat all " +
+  "of it unless it is actually relevant to what they asked.";
+
+exports.chatWithAssistant = onRequest(
+    {secrets: [geminiApiKey], cors: true},
+    async (req, res) => {
+      if (req.method !== "POST") {
+        res.status(405).json({error: "Method not allowed"});
+        return;
+      }
+
+      const authHeader = req.get("Authorization") || "";
+      const token = authHeader.startsWith("Bearer ") ?
+        authHeader.slice(7) :
+        null;
+      if (!token) {
+        res.status(401).json({error: "Missing Authorization token"});
+        return;
+      }
+      try {
+        await getAuth().verifyIdToken(token);
+      } catch {
+        res.status(401).json({error: "Invalid token"});
+        return;
+      }
+
+      const message = typeof req.body?.message === "string" ?
+        req.body.message.trim() :
+        "";
+      if (!message) {
+        res.status(400).json({error: "message is required"});
+        return;
+      }
+      const history = Array.isArray(req.body?.history) ? req.body.history : [];
+
+      const contents = [];
+      for (const turn of history.slice(-10)) {
+        if (!turn || typeof turn.text !== "string" || !turn.text.trim()) {
+          continue;
+        }
+        contents.push({
+          role: turn.sender === "assistant" ? "model" : "user",
+          parts: [{text: turn.text}],
+        });
+      }
+      contents.push({role: "user", parts: [{text: message}]});
+
+      try {
+        const url = "https://generativelanguage.googleapis.com/v1beta/" +
+          "models/gemini-2.0-flash:generateContent?key=" +
+          geminiApiKey.value();
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({
+            systemInstruction: {parts: [{text: ASSISTANT_SYSTEM_PROMPT}]},
+            contents,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          logger.error("Gemini error", data);
+          res.status(502).json({error: "Assistant is unavailable right now."});
+          return;
+        }
+        const reply = (data.candidates?.[0]?.content?.parts || [])
+            .map((part) => part.text || "")
+            .join("")
+            .trim();
+        res.status(200).json({
+          reply: reply || "Sorry, I couldn't come up with a reply to that.",
+        });
+      } catch (error) {
+        logger.error("chatWithAssistant failed", error);
+        res.status(502).json({error: "Assistant is unavailable right now."});
+      }
     },
 );

@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/config/app_services.dart';
 import '../../../domain/models/app_user.dart';
 import '../../controllers/auth_controller.dart';
+import 'chat_assistant_screen.dart';
 import 'dashboard_screen.dart';
 import 'feature_catalog.dart';
 import 'feature_router.dart';
@@ -80,6 +81,19 @@ class _RoleHomeShellState extends State<RoleHomeShell> {
         onOpenFeature: _openFeatureFromDrawer,
       ),
       body: IndexedStack(index: _index, children: pages),
+      floatingActionButton: FloatingActionButton(
+        heroTag: 'assistant-fab',
+        backgroundColor: AppColors.orange,
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => ChatAssistantScreen(
+              user: widget.user,
+              services: widget.services,
+            ),
+          ),
+        ),
+        child: const Icon(Icons.chat_rounded, color: Colors.white),
+      ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(18, 0, 18, 12),
         child: Container(
