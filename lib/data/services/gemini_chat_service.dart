@@ -43,7 +43,7 @@ class GeminiChatService implements ChatService {
 
   static const _endpoint =
       'https://generativelanguage.googleapis.com/v1beta/models/'
-      'gemini-2.0-flash:generateContent';
+      'gemini-3.6-flash:generateContent';
 
   @override
   Future<String> ask(
