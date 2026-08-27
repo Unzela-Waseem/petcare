@@ -27,6 +27,8 @@ abstract final class AppEnvironment {
   static bool get usesCloudinary =>
       cloudinaryCloudName.isNotEmpty && cloudinaryUploadPreset.isNotEmpty;
 
+  static const geminiApiKey = String.fromEnvironment('GEMINI_API_KEY');
+
   static const appName = 'PawfectCare';
   static const publicWebBaseUrl = String.fromEnvironment(
     'PUBLIC_WEB_BASE_URL',
